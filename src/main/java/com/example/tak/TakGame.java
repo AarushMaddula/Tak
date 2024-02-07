@@ -26,13 +26,29 @@ public class TakGame {
         }
 
         this.size = size;
-        makePlayers();
+
+        Colors[] colors = {Colors.WHITE, Colors.BLACK};
+
+        for (Colors color : colors) {
+            Player player = new Player(color, size);
+            player.setNormalPieceCount(getNumNormalPieces(size));
+            player.setBishopPieceCount(getNumBishopPieces(size));
+            players.add(player);
+        }
+
         moves.add(getBoardString());
     }
 
     TakGame(String boardString) {
         size = getSizeFromBoard(boardString);
-        makePlayers();
+
+        Colors[] colors = {Colors.WHITE, Colors.BLACK};
+
+        for (Colors color : colors) {
+            Player player = new Player(color, size);
+            players.add(player);
+        }
+
         setBoardString(boardString);
         moves.add(getBoardString());
     }
@@ -128,14 +144,10 @@ public class TakGame {
             PieceType type = null;
 
             switch (Character.toLowerCase(c)) {
-                case 'f':
-                    type = PieceType.FLAT;
-                case 's':
-                    type = PieceType.STANDING;
-                case 'b':
-                    type = PieceType.BISHOP;
-                default:
-                    System.out.println("INVALID PIECE TYPE IN BOARD STRING");
+                case 'f' -> type = PieceType.FLAT;
+                case 's' -> type = PieceType.STANDING;
+                case 'b' -> type = PieceType.BISHOP;
+                default -> System.out.println("INVALID PIECE TYPE IN BOARD STRING");
             }
 
             if (color == Colors.WHITE) {
@@ -159,50 +171,63 @@ public class TakGame {
 
         for (Player player : players) {
             if (player.getColor() == Colors.WHITE) {
-                player.setPieceCount(PieceType.FLAT, getNumNormalPieces(size) - numNormalPiecesWhite);
-                player.setPieceCount(PieceType.BISHOP, getNumBishopPieces(size) - numBishopsWhite);
+                player.setNormalPieceCount(getNumNormalPieces(size) - numNormalPiecesWhite);
+                player.setBishopPieceCount(getNumBishopPieces(size) - numBishopsWhite);
 
             } else {
-                player.setPieceCount(PieceType.FLAT, getNumNormalPieces(size) - numNormalPiecesBlack);
-                player.setPieceCount(PieceType.BISHOP, getNumBishopPieces(size) - numBishopsBlack);
+                player.setNormalPieceCount(getNumNormalPieces(size) - numNormalPiecesBlack);
+                player.setBishopPieceCount(getNumBishopPieces(size) - numBishopsBlack);
             }
         }
 
     }
 
     class Player {
-        int numNormalPieces;
-        int numBishops;
+
+        ArrayList<Stack<Piece>> playerPieces;
         Colors color;
 
-        Player (Colors color) {
+        Player (Colors color, int size) {
             this.color = color;
-        }
+            this.playerPieces = new ArrayList<>();
 
-        public Piece getPiece(PieceType type) {
-            Piece piece = new Piece(color, type);
-            if (type.equals(PieceType.FLAT) || type.equals(PieceType.STANDING)) {
-                numNormalPieces--;
-            } else {
-                numBishops--;
+            for (int i = 0; i < size; i++) {
+                playerPieces.add(new Stack<Piece>());
             }
-            return piece;
         }
 
-        public int getNumNormalPieces() {
-            return numNormalPieces;
-        }
-
-        public int getNumBishops() {
-            return numBishops;
-        }
-
-        public void setPieceCount(PieceType type, int count) {
-            if (type.equals(PieceType.FLAT) || type.equals(PieceType.STANDING)) {
-                numNormalPieces = count;
-            } else {
-                numBishops = count;
+        public void removePiece(Piece piece) {
+            for (Stack<Piece> stack: playerPieces) {
+                stack.remove(piece);
             }
+        }
+
+        public void setBishopPieceCount(int numPieces) {
+            int size = playerPieces.size();
+
+            for (int i = 0; i < numPieces; i++) {
+                Piece bishop = new Piece(color, PieceType.BISHOP);
+
+                bishop.setOrder(0);
+                playerPieces.get((size - 1) - i).add(bishop);
+            }
+        }
+
+        public void setNormalPieceCount(int numPieces) {
+            for (int i = 0; i < numPieces; i++) {
+                Piece normal = new Piece(color, PieceType.FLAT);
+
+                normal.setOrder(i % 15);
+                playerPieces.get(i / 15).add(normal);
+            }
+        }
+
+        public void addPiece(Piece piece) {
+
+        }
+
+        public ArrayList<Stack<Piece>> getPlayerPieces() {
+            return playerPieces;
         }
 
         public Colors getColor() {return color;}
@@ -211,6 +236,8 @@ public class TakGame {
     class Piece {
         PieceType type;
         Colors color;
+
+        HelloApplication.Piece boardPiece;
         int order, row, column;
 
         Piece (Colors color, PieceType type) {
@@ -250,6 +277,14 @@ public class TakGame {
 
         int getColumn() {
             return column;
+        }
+
+        public void setBoardPiece(HelloApplication.Piece boardPiece) {
+            this.boardPiece = boardPiece;
+        }
+
+        public HelloApplication.Piece getBoardPiece() {
+            return boardPiece;
         }
     }
 
@@ -332,12 +367,16 @@ public class TakGame {
         moves.add(getBoardString());
     }
 
-    public void placePiece(int row, int column, Colors color, PieceType type) {
+    public void placePiece(int row, int column, Colors color, Piece piece) {
         Player player = color == Colors.WHITE ? players.get(0) : players.get(1);
 
-        Piece piece = player.getPiece(type);
+        player.removePiece(piece);
         Stack<Piece> square = board[row][column];
+
         piece.setOrder(square.size());
+        piece.setRow(row);
+        piece.setColumn(column);
+
         square.add(piece);
 
         turn++;
@@ -375,11 +414,6 @@ public class TakGame {
         };
     }
 
-    private void setNumPieces(int size, Player player) {
-        player.setPieceCount(PieceType.FLAT, getNumNormalPieces(size));
-        player.setPieceCount(PieceType.BISHOP, getNumBishopPieces(size));
-    }
-
     private int getSizeFromBoard(String fullBoardString) {
         int boardSize = 0;
 
@@ -402,16 +436,6 @@ public class TakGame {
 
     }
 
-    private void makePlayers() {
-        Colors[] colors = {Colors.WHITE, Colors.BLACK};
-
-        for (Colors color : colors) {
-            Player player = new Player(color);
-            setNumPieces(size, player);
-            players.add(player);
-        }
-    }
-
     public Player getCurrentPlayer() {
         return players.get(turn % 2);
     }
@@ -423,6 +447,4 @@ public class TakGame {
     public ArrayList<Player> getPlayers() {
         return players;
     }
-
-
 }
