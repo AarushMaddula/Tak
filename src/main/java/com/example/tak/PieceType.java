@@ -1,7 +1,7 @@
-package src;
+package com.example.tak;
 
 public enum PieceType {
     FLAT,
     STANDING,
-    CAPSTONE
+    BISHOP
 }
