@@ -288,11 +288,9 @@ public class TakGame {
         }
     }
 
-    public boolean isValidMove(int row, int column, PieceType type) {
+    public boolean isValidMove(int row, int column) {
         Stack<Piece> square = board[row][column];
-        if (type == PieceType.BISHOP && (square.isEmpty() || square.peek().getType() != PieceType.BISHOP)) return true;
-        if (!square.isEmpty()) return false;
-        return true;
+        return square.isEmpty();
     }
 
     public boolean isValidMove(int fromRow, int fromCol, int toRow, int toCol, int bottomIndex) {
@@ -303,8 +301,6 @@ public class TakGame {
         Colors color = player.getColor();
 
         Piece topPiece = square.peek();
-
-        if (topPiece.getType() == PieceType.BISHOP && square.size() != 1) return false;
 
         if ((square.size() - bottomIndex) + endSquare.size() > size || topPiece.getColor() != color) {
             return false;
@@ -354,6 +350,9 @@ public class TakGame {
         //adds all selected pieces to final square
         for (Piece piece: subStack) {
             piece.setOrder(endSquare.size());
+            piece.setRow(toRow);
+            piece.setColumn(toCol);
+
             endSquare.add(piece);
         }
 
@@ -367,8 +366,8 @@ public class TakGame {
         moves.add(getBoardString());
     }
 
-    public void placePiece(int row, int column, Colors color, Piece piece) {
-        Player player = color == Colors.WHITE ? players.get(0) : players.get(1);
+    public void placePiece(int row, int column, Piece piece) {
+        Player player = piece.getColor() == Colors.WHITE ? players.get(0) : players.get(1);
 
         player.removePiece(piece);
         Stack<Piece> square = board[row][column];
