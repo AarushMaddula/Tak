@@ -12,9 +12,11 @@ public class TakGame {
 
     private Stack<Piece> playerSelection = new Stack<>();
 
+    public int stackRow, stackColumn;
+
     private ArrayList<Player> players = new ArrayList<>();
 
-    private ArrayList<String> moves = new ArrayList<>();
+    private Stack<String> moves = new Stack<>();
 
     TakGame(int size) {
         board = new Stack[size][size];
@@ -64,28 +66,24 @@ public class TakGame {
             for (int c = 0; c < size; c++) {
                 Stack<Piece> square = board[r][c];
 
-                if (square.empty()) countEmpty++;
-                else if (countEmpty != 0) {
+                if (square.isEmpty()) {
+                    countEmpty++;
+                    continue;
+                } else if (countEmpty != 0) {
                     boardString.append(countEmpty);
                     countEmpty = 0;
                 }
 
                 boardString.append("[");
 
-                Iterator<Piece> stack = square.iterator();
-
-                while (stack.hasNext()) {
-                    Piece piece = stack.next();
+                for (Piece piece : square) {
                     PieceType type = piece.getType();
                     Colors color = piece.getColor();
 
                     switch (type) {
-                        case FLAT:
-                            boardString.append(color == Colors.WHITE ? "f" : "F");
-                        case STANDING:
-                            boardString.append(color == Colors.WHITE ? "s" : "S");
-                        case BISHOP:
-                            boardString.append(color == Colors.WHITE ? "b" : "B");
+                        case FLAT -> boardString.append(color == Colors.WHITE ? "f" : "F");
+                        case STANDING -> boardString.append(color == Colors.WHITE ? "s" : "S");
+                        case BISHOP -> boardString.append(color == Colors.WHITE ? "b" : "B");
                     }
                 }
 
@@ -96,6 +94,8 @@ public class TakGame {
                 boardString.append(countEmpty);
                 countEmpty = 0;
             }
+
+            if (r != size - 1) boardString.append("|");
         }
 
         return boardString.toString();
@@ -103,7 +103,7 @@ public class TakGame {
 
     public void setBoardString(String fullBoardString) {
         String[] boardStringSplit = fullBoardString.split("\\.");
-        turn = Integer.getInteger(boardStringSplit[0]);
+        turn = Integer.parseInt(boardStringSplit[0]);
         String boardString = boardStringSplit[1];
 
         int row = 0;
@@ -124,11 +124,12 @@ public class TakGame {
             char c = boardString.charAt(i);
 
             if (Character.isDigit(c)) {
-                column += c;
+                for (int j = 0; j < c - '0'; j++) {
+                    board[row][column] = new Stack<>();
+                    column++;
+                }
                 continue;
             } else if (c == '[') {
-                column++;
-                square.empty();
                 continue;
             } else if (c == '|') {
                 row++;
@@ -136,6 +137,8 @@ public class TakGame {
                 continue;
             } else if (c == ']') {
                 board[row][column] = square;
+                square = new Stack<>();
+                column++;
                 continue;
             }
 
@@ -166,6 +169,11 @@ public class TakGame {
 
 
             Piece piece = new Piece(color, type);
+
+            piece.setOrder(square.size());
+            piece.setRow(row);
+            piece.setColumn(column);
+
             square.push(piece);
         }
 
@@ -338,6 +346,11 @@ public class TakGame {
         int row = piece.getRow();
         int column = piece.getColumn();
 
+        if (playerSelection.isEmpty()) {
+            stackRow = row;
+            stackColumn = column;
+        }
+
         playerSelection.add(piece);
 
         Stack<Piece> square = getSquare(row, column);
@@ -410,7 +423,7 @@ public class TakGame {
             char c = boardString.charAt(i);
 
             if (Character.isDigit(c)) {
-                boardSize += c;
+                boardSize += c - '0';
             } else if (c == '[') {
                 boardSize++;
             } else if (c == '|') {
@@ -432,5 +445,9 @@ public class TakGame {
 
     public ArrayList<Player> getPlayers() {
         return players;
+    }
+
+    public Stack<String> getMoves() {
+        return moves;
     }
 }

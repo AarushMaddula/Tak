@@ -18,6 +18,7 @@ import javafx.scene.shape.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.Stack;
 
 public class HelloApplication extends Application {
@@ -44,7 +45,9 @@ public class HelloApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
 
-        TakGame game = new TakGame(SIZE);
+        TakGame game = new TakGame("12.6|6|2[FfFfFf]3|2[F]3|6|6");
+        //TakGame game = new TakGame(SIZE);
+
         color = game.getCurrentPlayer().getColor();
         SmartGroup root = new SmartGroup();
 
@@ -83,7 +86,9 @@ public class HelloApplication extends Application {
                 square.setRow(r);
                 square.setColumn(c);
 
-                square.setOnMousePressed(e -> movePiece(square.getRow(), square.getColumn(), game));
+                square.setOnMouseClicked(e -> {
+                    if (!game.getPlayerSelection().isEmpty()) movePiece(square.getRow(), square.getColumn(), game);
+                });
 
                 root.getChildren().add(square);
 
@@ -350,14 +355,20 @@ public class HelloApplication extends Application {
             }
         }
 
+        Stack<TakGame.Piece> playerSelection = game.getPlayerSelection();
+
+        if (!playerSelection.isEmpty()) getSelection(playerSelection.get(0).getBoardPiece(), game, false);
+
     }
 
     public void getSelection(Piece piece, TakGame game, boolean addPieces) {
         Stack<TakGame.Piece> selectedSquare = game.getSquare(piece.getRow(), piece.getColumn());
+
         int size = selectedSquare.size();
+        int order = 0;
 
         for (int j = 0; j < size; j++) {
-            TakGame.Piece selPiece = selectedSquare.get(0);
+            TakGame.Piece selPiece = selectedSquare.get(order);
             Piece selBoardPiece = selPiece.getBoardPiece();
 
             if (selPiece.getOrder() >= piece.getOrder()) {
@@ -365,6 +376,8 @@ public class HelloApplication extends Application {
                 int yValue = (int) ((-236 + diffOrder * -11) - (selBoardPiece.getHeight() / 2));
                 selBoardPiece.translateYProperty().set(yValue);
                 if (addPieces) game.setSelection(selPiece);
+            } else {
+                order++;
             }
         }
     }
@@ -425,7 +438,6 @@ public class HelloApplication extends Application {
         TakGame.Piece gamePiece = pieceSelected.get(0);
         Piece piece = gamePiece.getBoardPiece();
 
-
         if (!piece.getOnBoard() && game.isValidPlacement(toRow, toColumn)) {
             game.placePiece(toRow, toColumn);
         } else if (piece.getOnBoard() && game.isValidMove(toRow, toColumn)) {
@@ -436,8 +448,11 @@ public class HelloApplication extends Application {
         }
 
         if (pieceSelected.isEmpty()) {
-            game.toNextTurn();
-            color = game.getCurrentPlayer().getColor();
+            if (!Objects.equals(game.getMoves().peek(), game.getBoardString())) {
+                game.toNextTurn();
+                System.out.println(game.getBoardString());
+                color = game.getCurrentPlayer().getColor();
+            }
         } else {
             isMovingStack = true;
         }
