@@ -288,28 +288,26 @@ public class TakGame {
         }
     }
 
-    public boolean isValidMove(int row, int column) {
+    public boolean isValidPlacement(int row, int column) {
         Stack<Piece> square = board[row][column];
         return square.isEmpty();
     }
 
-    public boolean isValidMove(int fromRow, int fromCol, int toRow, int toCol, int bottomIndex) {
-        Stack<Piece> square = board[fromRow][fromCol];
+    public boolean isValidMove(int toRow, int toCol) {
+        if (playerSelection.isEmpty()) return false;
+
         Stack<Piece> endSquare = board[toRow][toCol];
+        Piece piece = playerSelection.get(0);
 
-        Player player = getCurrentPlayer();
-        Colors color = player.getColor();
+        int fromRow = piece.getRow();
+        int fromCol = piece.getColumn();
 
-        Piece topPiece = square.peek();
-
-        if ((square.size() - bottomIndex) + endSquare.size() > size || topPiece.getColor() != color) {
-            return false;
-        }
+        if (endSquare.size() == size) return false;
 
         if (!endSquare.isEmpty()) {
             Piece topEndPiece = endSquare.peek();
 
-            if (topEndPiece.getType() != PieceType.FLAT && !(topPiece.getType() == PieceType.BISHOP && bottomIndex == topPiece.getOrder())) {
+            if (topEndPiece.getType() != PieceType.FLAT && !(piece.getType() == PieceType.BISHOP)) {
                 return false;
             }
 
@@ -324,56 +322,35 @@ public class TakGame {
         return true;
     }
 
-    public void moveStack(int fromRow, int fromCol, int toRow, int toCol, int bottomIndex) {
-        Stack<Piece> square = board[fromRow][fromCol];
+    public void moveStack(int toRow, int toCol) {
         Stack<Piece> endSquare = board[toRow][toCol];
+        Piece piece = playerSelection.get(0);
 
-        List<Piece> subStack = new ArrayList<>();
-        int stackSize = square.size();
+        piece.setOrder(endSquare.size());
+        piece.setRow(toRow);
+        piece.setColumn(toCol);
 
-        //removes pieces from original square
-
-        int count = 0;
-        for (int i = 0; i < stackSize; i++) {
-            Piece piece = square.get(count);
-
-            if (count >= bottomIndex) {
-                square.remove(count);
-                subStack.add(piece);
-            } else {
-                count++;
-            }
-        }
-
-        if (!endSquare.isEmpty() && endSquare.peek().getType() == PieceType.STANDING) {
-            endSquare.peek().setType(PieceType.FLAT);
-        }
-
-        //adds all selected pieces to final square
-        for (Piece piece: subStack) {
-            piece.setOrder(endSquare.size());
-            piece.setRow(toRow);
-            piece.setColumn(toCol);
-
-            endSquare.add(piece);
-        }
+        endSquare.add(piece);
+        playerSelection.remove(0);
     }
 
-    public void setSelection(Stack<HelloApplication.Piece> playerBoardSelection) {
-        for (int i = 0; i < playerBoardSelection.size(); i++) {
-            Piece piece = playerBoardSelection.get(i).getGamePiece();
+    public void setSelection(Piece piece) {
+        int row = piece.getRow();
+        int column = piece.getColumn();
 
-            int row = piece.getRow();
-            int column = piece.getColumn();
+        playerSelection.add(piece);
 
-            Stack<Piece> square = getSquare(row, column);
-            square.remove(piece);
-
-            playerSelection.add(piece);
-        }
+        Stack<Piece> square = getSquare(row, column);
+        square.remove(piece);
     }
 
-    public void placePiece(int row, int column, Piece piece) {
+    public Stack<Piece> getPlayerSelection() {
+        return playerSelection;
+    }
+
+    public void placePiece(int row, int column) {
+        Piece piece = playerSelection.get(0);
+
         Player player = piece.getColor() == Colors.WHITE ? players.get(0) : players.get(1);
 
         player.removePiece(piece);
@@ -384,6 +361,7 @@ public class TakGame {
         piece.setColumn(column);
 
         square.add(piece);
+        playerSelection.remove(0);
     }
 
     public void toNextTurn() {
