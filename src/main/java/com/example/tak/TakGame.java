@@ -10,7 +10,7 @@ public class TakGame {
 
     private Stack<Piece>[][] board;
 
-    private Stack<Piece> playerSelection;
+    private Stack<Piece> playerSelection = new Stack<>();
 
     private ArrayList<Player> players = new ArrayList<>();
 
@@ -309,7 +309,7 @@ public class TakGame {
         if (!endSquare.isEmpty()) {
             Piece topEndPiece = endSquare.peek();
 
-            if (topEndPiece.getType() != PieceType.FLAT && !(square.peek().getType() == PieceType.BISHOP && square.size() == 1)) {
+            if (topEndPiece.getType() != PieceType.FLAT && !(topPiece.getType() == PieceType.BISHOP && bottomIndex == topPiece.getOrder())) {
                 return false;
             }
 
@@ -317,7 +317,7 @@ public class TakGame {
 
         int totalOffset = Math.abs(toRow - fromRow) + Math.abs(toCol - fromCol);
 
-        if (totalOffset != 1) {
+        if (totalOffset > 1) {
             return false;
         }
 
@@ -329,8 +329,10 @@ public class TakGame {
         Stack<Piece> endSquare = board[toRow][toCol];
 
         List<Piece> subStack = new ArrayList<>();
-
         int stackSize = square.size();
+
+        //removes pieces from original square
+
         int count = 0;
         for (int i = 0; i < stackSize; i++) {
             Piece piece = square.get(count);
@@ -355,15 +357,20 @@ public class TakGame {
 
             endSquare.add(piece);
         }
+    }
 
-        //removes pieces from original square
-        int numTime = square.size() - bottomIndex;
-        for (int i = 0; i < numTime; i++) {
-            square.pop();
+    public void setSelection(Stack<HelloApplication.Piece> playerBoardSelection) {
+        for (int i = 0; i < playerBoardSelection.size(); i++) {
+            Piece piece = playerBoardSelection.get(i).getGamePiece();
+
+            int row = piece.getRow();
+            int column = piece.getColumn();
+
+            Stack<Piece> square = getSquare(row, column);
+            square.remove(piece);
+
+            playerSelection.add(piece);
         }
-
-        turn++;
-        moves.add(getBoardString());
     }
 
     public void placePiece(int row, int column, Piece piece) {
@@ -377,7 +384,9 @@ public class TakGame {
         piece.setColumn(column);
 
         square.add(piece);
+    }
 
+    public void toNextTurn() {
         turn++;
         moves.add(getBoardString());
     }

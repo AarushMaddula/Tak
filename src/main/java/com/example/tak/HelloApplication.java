@@ -38,6 +38,9 @@ public class HelloApplication extends Application {
 
     public boolean isSelected = false;
     private final Stack<Piece> pieceSelected = new Stack<>();
+
+    public boolean isMovingStack = false;
+
     private Colors color;
 
     @Override
@@ -186,7 +189,7 @@ public class HelloApplication extends Application {
 
         stage.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
             if (event.getTarget().getClass() != Piece.class && event.getTarget().getClass() != Square.class) {
-                undoSelection();
+                undoSelection(game);
             }
         });
 
@@ -273,7 +276,7 @@ public class HelloApplication extends Application {
                     convertPieceShape(piece, pieceType);
 
                     int XOffset = (c * 110) - (SIZE - 1) * 55;
-                    int YOffset = pieceType == PieceType.BISHOP ? (int) (-11 - (order * 11) - (piece.getHeight() / 2)) : -17 + (order * -11);
+                    int YOffset = (int) (-11 - (order * 11) - (piece.getHeight() / 2));
                     int ZOffset = (r * 110) - (SIZE - 1) * 55;
 
                     piece.translateXProperty().set(XOffset);
@@ -289,6 +292,14 @@ public class HelloApplication extends Application {
                     mat.setDiffuseColor(fxColor);
                     piece.setMaterial(mat);
 
+                    if (!pieceSelected.isEmpty() &&
+                            pieceSelected.get(0).getOrder() <= piece.getOrder() &&
+                            pieceSelected.get(0).getRow() == piece.getRow() &&
+                            pieceSelected.get(0).getColumn() == piece.getColumn()
+                    ) {
+                        getSelection(pieceSelected.get(0), game, false);
+                    }
+
                     piece.setOnMouseClicked(e -> {
                         if (!pieceSelected.isEmpty()) {
                             movePiece(piece.getRow(), piece.getColumn(), game, root);
@@ -297,19 +308,9 @@ public class HelloApplication extends Application {
 
                         if (!isMovable(piece, game)) return;
 
-                        Stack<TakGame.Piece> selectedSquare = game.getSquare(piece.getRow(), piece.getColumn());
+                        getSelection(piece, game, true);
 
-                        for (int j = 0; j < selectedSquare.size(); j++) {
-                            TakGame.Piece selPiece = selectedSquare.get(j);
-
-                            if (selPiece.getOrder() >= piece.getOrder()) {
-                                int diffOrder = selPiece.getOrder() - piece.getOrder();
-                                int yValue = pieceType == PieceType.BISHOP ? (int) ((-236 + diffOrder * -11) - (piece.getHeight() / 2)) : -236 + diffOrder * -11;
-                                selPiece.getBoardPiece().translateYProperty().set(yValue);
-
-                                pieceSelected.add(selPiece.getBoardPiece());
-                            }
-                        }
+                        game.setSelection(pieceSelected);
                     });
 
                     root.getChildren().add(piece);
@@ -338,7 +339,7 @@ public class HelloApplication extends Application {
                     convertPieceShape(piece, pieceType);
 
                     int XOffset = (SIZE * 55 - 55) * -1 + (s * 110);
-                    int YOffset = pieceType == PieceType.BISHOP ? (int) (-11 - (order * 11) - (piece.getHeight() / 2)) : (order % 15 * -11) - 16;
+                    int YOffset = (int) (-11 - (order * 11) - (piece.getHeight() / 2));
                     int ZOffset = (SIZE * 55 + 115);
 
                     if (playerColor == Colors.WHITE) ZOffset *= -1;
@@ -346,7 +347,7 @@ public class HelloApplication extends Application {
                     piece.translateXProperty().set(XOffset);
                     piece.translateYProperty().set(YOffset);
                     piece.translateZProperty().set(ZOffset);
-                    
+
                     piece.setBoardPositionX(XOffset);
                     piece.setBoardPositionY(YOffset);
                     piece.setBoardPositionZ(ZOffset);
@@ -355,8 +356,10 @@ public class HelloApplication extends Application {
                         if (piece.getColor() != game.getCurrentPlayer().getColor()) return;
 
                         if (pieceSelected.isEmpty()) {
-                            undoSelection();
+                            undoSelection(game);
                             pieceSelected.add(piece);
+                            game.setSelection(pieceSelected);
+
                             piece.translateYProperty().set(-236);
 
                         } else if (pieceSelected.get(0) != piece) {
@@ -383,7 +386,22 @@ public class HelloApplication extends Application {
 
     }
 
-    public void undoSelection() {
+    public void getSelection(Piece piece, TakGame game, boolean addPieces) {
+        Stack<TakGame.Piece> selectedSquare = game.getSquare(piece.getRow(), piece.getColumn());
+
+        for (int j = 0; j < selectedSquare.size(); j++) {
+            TakGame.Piece selPiece = selectedSquare.get(j);
+
+            if (selPiece.getOrder() >= piece.getOrder()) {
+                int diffOrder = selPiece.getOrder() - piece.getOrder();
+                int yValue = (int) ((-236 + diffOrder * -11) - (piece.getHeight() / 2));
+                selPiece.getBoardPiece().translateYProperty().set(yValue);
+                if (addPieces) pieceSelected.add(selPiece.getBoardPiece());
+            }
+        }
+    }
+
+    public void undoSelection(TakGame game) {
         for (Piece piece: pieceSelected) {
             if (!piece.getOnBoard()) convertPieceShape(piece, PieceType.FLAT);
 
@@ -393,6 +411,7 @@ public class HelloApplication extends Application {
         }
 
         pieceSelected.clear();
+        game.setSelection(pieceSelected);
     }
 
     public void convertPieceShape(Piece p, PieceType type) {
@@ -438,8 +457,15 @@ public class HelloApplication extends Application {
             return;
         }
 
-        pieceSelected.clear();
-        color = game.getCurrentPlayer().getColor();
+        pieceSelected.remove(0);
+
+        if (pieceSelected.isEmpty()) {
+            game.toNextTurn();
+            color = game.getCurrentPlayer().getColor();
+        } else {
+            isMovingStack = true;
+        }
+
         loadBoard(root, game);
     }
 
