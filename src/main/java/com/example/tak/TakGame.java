@@ -12,7 +12,7 @@ public class TakGame {
 
     private Stack<Piece> playerSelection = new Stack<>();
 
-    public int stackRow, stackColumn;
+    public Direction direction = null;
 
     private ArrayList<Player> players = new ArrayList<>();
 
@@ -327,6 +327,22 @@ public class TakGame {
             return false;
         }
 
+        if (direction != null && totalOffset != 0) {
+            int changeRow = toRow - fromRow;
+            int changeColumn = toCol - fromCol;
+
+            if (changeRow > 0 && direction == Direction.NORTH) {
+                return true;
+            } else if (changeRow < 0 && direction == Direction.SOUTH){
+                return true;
+            } else if (changeColumn > 0 && direction == Direction.EAST) {
+                return true;
+            } else if (changeColumn < 0 && direction == Direction.WEST) {
+                return true;
+            }
+            return false;
+        }
+
         return true;
     }
 
@@ -334,22 +350,45 @@ public class TakGame {
         Stack<Piece> endSquare = board[toRow][toCol];
         Piece piece = playerSelection.get(0);
 
+        if (direction == null) {
+            int fromRow = piece.getRow();
+            int fromCol = piece.getColumn();
+
+            int changeRow = toRow - fromRow;
+            int changeColumn = toCol - fromCol;
+
+            if (changeRow > 0) {
+                direction = Direction.NORTH;
+            } else if (changeRow < 0){
+                direction = Direction.SOUTH;
+            } else if (changeColumn > 0) {
+                direction = Direction.EAST;
+            } else if (changeColumn < 0) {
+                direction = Direction.WEST;
+            }
+        }
+
+        for (Piece selPiece : playerSelection) {
+            selPiece.setOrder(selPiece.getOrder() - 1);
+            selPiece.setRow(toRow);
+            selPiece.setColumn(toCol);
+        }
         piece.setOrder(endSquare.size());
-        piece.setRow(toRow);
-        piece.setColumn(toCol);
+
+
+        if (piece.getType() == PieceType.BISHOP && !endSquare.isEmpty()) endSquare.peek().setType(PieceType.FLAT);
 
         endSquare.add(piece);
         playerSelection.remove(0);
+
+        if (playerSelection.isEmpty()) {
+            direction = null;
+        }
     }
 
     public void setSelection(Piece piece) {
         int row = piece.getRow();
         int column = piece.getColumn();
-
-        if (playerSelection.isEmpty()) {
-            stackRow = row;
-            stackColumn = column;
-        }
 
         playerSelection.add(piece);
 
