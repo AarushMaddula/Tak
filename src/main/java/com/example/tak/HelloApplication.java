@@ -6,6 +6,7 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.*;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
@@ -16,6 +17,8 @@ import javafx.stage.Stage;
 import javafx.scene.shape.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Objects;
 import java.util.Stack;
 
 public class HelloApplication extends Application {
@@ -34,16 +37,18 @@ public class HelloApplication extends Application {
     public final int SIZE = 6;
 
     public boolean isSelected = false;
-    private PieceType pieceSelected = null;
+
+    public boolean isMovingStack = false;
+
     private Colors color;
-    private Piece pieceMoveSelection = null;
-    private Box pieceDragged;
 
     @Override
     public void start(Stage stage) throws IOException {
 
+        //TakGame game = new TakGame("12.6|6|2[FfFfFf]3|2[F]3|6|6");
         TakGame game = new TakGame(SIZE);
-        color = game.getCurrentPlayer().color;
+
+        color = game.getCurrentPlayer().getColor();
         SmartGroup root = new SmartGroup();
 
         PhongMaterial mat = new PhongMaterial();
@@ -81,27 +86,8 @@ public class HelloApplication extends Application {
                 square.setRow(r);
                 square.setColumn(c);
 
-                square.setOnMousePressed(e -> {
-                    System.out.println("(" + square.getTranslateX() + "," + square.getTranslateZ() + ")");
-                    System.out.println("(" + square.getRow() + "," + square.getColumn() + ")");
-
-                    if (pieceSelected != null && game.isValidMove(square.getRow(),square.getColumn(), PieceType.FLAT)) {
-                        game.placePiece(square.getRow(),square.getColumn(), color, pieceSelected);
-                        pieceSelected = null;
-                        color = game.getCurrentPlayer().color;
-                        reloadBoard(root, game);
-                        return;
-                    }
-
-                    if (pieceMoveSelection != null && game.isValidMove(pieceMoveSelection.getRow(), pieceMoveSelection.getColumn(), square.getRow(), square.getColumn(), pieceMoveSelection.getOrder())) {
-                        game.moveStack(pieceMoveSelection.getRow(), pieceMoveSelection.getColumn(), square.getRow(), square.getColumn(), pieceMoveSelection.getOrder());
-                        pieceMoveSelection = null;
-                        color = game.getCurrentPlayer().color;
-                        reloadBoard(root, game);
-                        return;
-                    }
-
-                    System.out.println("Invalid move");
+                square.setOnMouseClicked(e -> {
+                    if (!game.getPlayerSelection().isEmpty()) movePiece(square.getRow(), square.getColumn(), game);
                 });
 
                 root.getChildren().add(square);
@@ -166,16 +152,16 @@ public class HelloApplication extends Application {
 
         }
 
-        reloadBoard(root, game);
+        initPieces(game, root);
 
         Camera camera = new PerspectiveCamera();
 
         Scene scene = new Scene(root, WIDTH, HEIGHT, true);
         scene.setCamera(camera);
-        scene.setFill(Color.SILVER);
+        scene.setFill(Color.BLANCHEDALMOND);
         root.translateXProperty().set(WIDTH/2);
         root.translateYProperty().set(HEIGHT/2);
-        root.translateZProperty().set(-100);
+        root.translateZProperty().set(250);
 
         initMouseControl(root, scene, stage);
 
@@ -202,6 +188,12 @@ public class HelloApplication extends Application {
             }
         });
 
+        stage.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
+            if (event.getTarget().getClass() != Piece.class && event.getTarget().getClass() != Square.class && !isMovingStack) {
+                undoSelection(game);
+            }
+        });
+
         stage.setTitle("Tak!");
         stage.setScene(scene);
         stage.show();
@@ -216,6 +208,8 @@ public class HelloApplication extends Application {
         );
         xRotate.angleProperty().bind(angleX);
         yRotate.angleProperty().bind(angleY);
+
+        angleX.set(50);
 
         scene.setOnMousePressed(event -> {
             if (isSelected) return;
@@ -250,66 +244,39 @@ public class HelloApplication extends Application {
         launch();
     }
 
-    public void reloadBoard(SmartGroup root, TakGame game) {
-        int numChildren = root.getChildren().size();
-        int count = 0;
-
-        //removes all pieces from root
-
-        for (int i = 0; i < numChildren; i++) {
-            if (root.getChildren().get(count).getClass() == Piece.class) {
-                root.getChildren().remove(count);
-            } else {
-                count++;
-            }
-        }
+    public void initPieces(TakGame game, SmartGroup root) {
 
         //places all pieces on the board
+        for (int row = 0; row < SIZE; row++) {
+            for (int column = 0; column < SIZE; column++) {
+                Stack<TakGame.Piece> square = game.getSquare(row, column);
 
-        for (int r = 0; r < SIZE; r++) {
-            for (int c = 0; c < SIZE; c++) {
-                Stack<TakGame.Piece> square = game.getSquare(r, c);
+                for (int order = 0; order < square.size(); order++) {
+                    TakGame.Piece gamepiece = square.get(order);
 
-                int order = 0;
+                    Colors color = gamepiece.getColor();
+                    PieceType pieceType = gamepiece.getType();
 
-                for (int i = 0; i < square.size(); i++) {
-                    TakGame.Piece piece = square.get(i);
+                    Piece piece = new Piece();
+                    piece.setGamePiece(gamepiece);
+                    piece.setOnBoard(true);
 
-                    Colors color = piece.getColor();
-                    PieceType pieceType = piece.getType();
+                    convertPieceShape(piece, pieceType);
 
-                    Piece p = new Piece();
-                    p.setGamePiece(piece);
-
-                    p.translateXProperty().set((c * 110) - (SIZE - 1) * 55);
-                    p.translateYProperty().set(-17 + (order * -11));
-                    p.translateZProperty().set((r * 110) - (SIZE - 1) * 55);
+                    setCoordinate(piece, row, column, order);
 
                     PhongMaterial mat = new PhongMaterial();
-                    Color fxColor = color.equals(Colors.WHITE) ? Color.WHITE : Color.BLACK;
-                    mat.setDiffuseColor(fxColor);
-                    p.setMaterial(mat);
+                    if (color == Colors.WHITE) {
+                        mat.setDiffuseMap(new Image(getClass().getResourceAsStream("/com/example/tak/WhitePiece.png")));
+                    } else {
+                        mat.setDiffuseMap(new Image(getClass().getResourceAsStream("/com/example/tak/BlackPiece.jpg")));
+                    }
 
-                    convertPieceShape(p, pieceType);
+                    piece.setMaterial(mat);
 
-                    p.setOnMouseClicked(e -> {
-                        undoSelection();
-                        pieceSelected = null;
-                        pieceMoveSelection = p;
+                    piece.setOnMouseClicked(e -> boardPieceBehavior(piece, game));
 
-                        Stack<TakGame.Piece> selectedSquare = game.getSquare(p.getRow(), p.getColumn());
-
-                        for (int j = 0; j < selectedSquare.size(); j++) {
-                            TakGame.Piece selPiece = selectedSquare.get(j);
-
-                            if (selPiece.getOrder() >= p.getOrder()) {
-                                //selPiece.translateYProperty().set(-236);
-                            }
-                        }
-                    });
-
-                    root.getChildren().add(p);
-                    order++;
+                    root.getChildren().add(piece);
                 }
             }
         }
@@ -317,101 +284,142 @@ public class HelloApplication extends Application {
         //places all player pieces on the sides of board
 
         for (TakGame.Player player: game.getPlayers()) {
-            int numPieces = player.getNumNormalPieces();
-            int numBishops = player.getNumBishops();
+
             Colors playerColor = player.getColor();
+            ArrayList<Stack<TakGame.Piece>> playerPieces = player.getPlayerPieces();
 
-            for (int i = 0; i < numPieces; i++) {
-                Piece p = new Piece();
+            for (int s = 0; s < playerPieces.size(); s++) {
+                Stack<TakGame.Piece> stack = playerPieces.get(s);
 
-                int XOffset = (SIZE * 55 - 55) * -1 + (i / 15) * 110;
-                int YOffset = (i % 15 * -11) - 16;
-                int ZOffset = (SIZE * 55 + 115);
+                for (int order = 0; order < stack.size(); order++) {
+                    Piece piece = new Piece();
+                    TakGame.Piece gamePiece = stack.get(order);
+                    piece.setGamePiece(gamePiece);
+                    piece.setOnBoard(false);
 
-                if (playerColor == Colors.WHITE) ZOffset *= -1;
+                    PieceType pieceType = gamePiece.getType();
+                    convertPieceShape(piece, pieceType);
 
-                p.translateXProperty().set(XOffset);
-                p.translateYProperty().set(YOffset);
-                p.translateZProperty().set(ZOffset);
+                    setCoordinate(piece, s, order);
 
-                p.setOrder(i % 15);
+                    piece.setOnMouseClicked(e -> playerPieceBehavior(piece, game));
 
-                convertPieceShape(p, PieceType.FLAT);
 
-                p.setOnMouseClicked(e -> {
-                    if (p.getColor() != game.getCurrentPlayer().getColor()) return;
-
-                    if (pieceSelected == PieceType.FLAT) {
-                        pieceSelected = PieceType.STANDING;
-                        convertPieceShape(p, PieceType.STANDING);
-                        return;
-                    } else if (pieceSelected == PieceType.STANDING) {
-                        pieceSelected = PieceType.FLAT;
-                        convertPieceShape(p, PieceType.FLAT);
-                        return;
+                    PhongMaterial mat = new PhongMaterial();
+                    if (playerColor == Colors.WHITE) {
+                        mat.setDiffuseMap(new Image(getClass().getResourceAsStream("/com/example/tak/WhitePiece.png")));
+                    } else {
+                        mat.setDiffuseMap(new Image(getClass().getResourceAsStream("/com/example/tak/BlackPiece.jpg")));
                     }
+                    piece.setMaterial(mat);
 
-                    undoSelection();
-                    pieceMoveSelection = null;
-                    pieceSelected = PieceType.FLAT;
-                    p.translateYProperty().set(-236);
-                });
-
-
-                PhongMaterial mat = new PhongMaterial();
-                Color fxColor = playerColor.equals(Colors.WHITE) ? Color.WHITE : Color.BLACK;
-                mat.setDiffuseColor(fxColor);
-                p.setMaterial(mat);
-
-                root.getChildren().add(p);
-            }
-
-            for (int i = 0; i < numBishops; i++) {
-                Piece p = new Piece();
-
-                int XOffset = (SIZE * 55 - 55) - i * 110;
-                int YOffset = -16;
-                int ZOffset = (SIZE * 55 + 115);
-
-                if (playerColor == Colors.WHITE) ZOffset *= -1;
-
-                p.translateXProperty().set(XOffset);
-                p.translateYProperty().set(YOffset);
-                p.translateZProperty().set(ZOffset);
-
-                convertPieceShape(p, PieceType.BISHOP);
-
-                p.setOnMouseClicked(e -> {
-                    if (p.getColor() != game.getCurrentPlayer().getColor()) return;
-
-                    undoSelection();
-                    pieceMoveSelection = null;
-                    pieceSelected = PieceType.BISHOP;
-                    p.translateYProperty().set(-236);
-                });
-
-
-                PhongMaterial mat = new PhongMaterial();
-                Color fxColor = playerColor.equals(Colors.WHITE) ? Color.WHITE : Color.BLACK;
-                mat.setDiffuseColor(fxColor);
-                p.setMaterial(mat);
-
-                root.getChildren().add(p);
+                    root.getChildren().add(piece);
+                }
             }
         }
-
     }
 
-    public void undoSelection() {
-        if (pieceMoveSelection != null) {
-            PhongMaterial mat3 = new PhongMaterial();
-            System.out.println(pieceMoveSelection.color);
-            mat3.setDiffuseColor(pieceMoveSelection.color == Colors.WHITE ? Color.WHITE : Color.BLACK);
-            pieceMoveSelection.setMaterial(mat3);
+    public void loadBoard(TakGame game) {
 
-            int order = pieceMoveSelection.getOrder();
-            pieceMoveSelection.translateYProperty().set((order % 15 * -11) - 16);
+        //places all pieces on the board
+        for (int row = 0; row < SIZE; row++) {
+            for (int column = 0; column < SIZE; column++) {
+                Stack<TakGame.Piece> square = game.getSquare(row, column);
+
+                for (int order = 0; order < square.size(); order++) {
+                    TakGame.Piece gamePiece = square.get(order);
+                    Piece piece = gamePiece.getBoardPiece();
+
+                    convertPieceShape(piece, piece.getType());
+                    setCoordinate(piece, row, column, order);
+                    piece.setOnBoard(true);
+
+                    piece.setOnMouseClicked(e -> boardPieceBehavior(piece, game));
+                }
+            }
         }
+
+        //places all player pieces on the sides of board
+
+        for (TakGame.Player player: game.getPlayers()) {
+
+            ArrayList<Stack<TakGame.Piece>> playerPieces = player.getPlayerPieces();
+
+            for (int s = 0; s < playerPieces.size(); s++) {
+                Stack<TakGame.Piece> stack = playerPieces.get(s);
+
+                for (int order = 0; order < stack.size(); order++) {
+                    TakGame.Piece gamePiece = stack.get(order);
+                    Piece piece = gamePiece.getBoardPiece();
+
+                    if (gamePiece.getType() == PieceType.STANDING) {
+                        gamePiece.setType(PieceType.FLAT);
+                        convertPieceShape(piece, PieceType.FLAT);
+                    }
+
+                    piece.setOnBoard(false);
+                    setCoordinate(piece, s, order);
+
+                    piece.setOnMouseClicked(e -> playerPieceBehavior(piece, game));
+                }
+            }
+        }
+
+        Stack<TakGame.Piece> playerSelection = game.getPlayerSelection();
+
+        for (TakGame.Piece piece: playerSelection) {
+            Piece boardPiece = piece.getBoardPiece();
+
+            int XOffset = (piece.getColumn() * 110) - (SIZE - 1) * 55;
+            int YOffset = (int) ((-236 + piece.getOrder() * -11) - (boardPiece.getHeight() / 2));
+            int ZOffset = (piece.getRow() * 110) - (SIZE - 1) * 55;
+
+            boardPiece.translateXProperty().set(XOffset);
+            boardPiece.translateYProperty().set(YOffset);
+            boardPiece.translateZProperty().set(ZOffset);
+        }
+    }
+
+    public void getSelection(Piece piece, TakGame game, boolean addPieces) {
+        Stack<TakGame.Piece> selectedSquare = game.getSquare(piece.getRow(), piece.getColumn());
+
+        int size = selectedSquare.size();
+        int order = 0;
+
+        for (int j = 0; j < size; j++) {
+            TakGame.Piece selPiece = selectedSquare.get(order);
+            Piece selBoardPiece = selPiece.getBoardPiece();
+
+            if (selPiece.getOrder() >= piece.getOrder()) {
+                int diffOrder = selPiece.getOrder() - piece.getOrder();
+                int YOffset = (int) ((-236 + diffOrder * -11) - (selBoardPiece.getHeight() / 2));
+                selBoardPiece.translateYProperty().set(YOffset);
+                if (addPieces) game.setSelection(selPiece);
+            } else {
+                order++;
+            }
+        }
+    }
+
+    public void undoSelection(TakGame game) {
+        Stack<TakGame.Piece> pieceSelected = game.getPlayerSelection();
+
+        for (TakGame.Piece gamePiece: pieceSelected) {
+            Piece piece = gamePiece.getBoardPiece();
+
+            if (!piece.getOnBoard() && piece.getType() != PieceType.BISHOP) convertPieceShape(piece, PieceType.FLAT);
+
+            piece.translateXProperty().set(piece.getBoardPositionX());
+            piece.translateYProperty().set(piece.getBoardPositionY());
+            piece.translateZProperty().set(piece.getBoardPositionZ());
+
+            int row = gamePiece.getRow();
+            int column = gamePiece.getColumn();
+
+            game.getSquare(row, column).add(gamePiece);
+        }
+
+        pieceSelected.clear();
     }
 
     public void convertPieceShape(Piece p, PieceType type) {
@@ -435,6 +443,119 @@ public class HelloApplication extends Application {
         p.setWidth(dimensions[0]);
         p.setHeight(dimensions[1]);
         p.setDepth(dimensions[2]);
+    }
+
+    public void movePiece(int toRow, int toColumn, TakGame game) {
+
+        Stack<TakGame.Piece> pieceSelected = game.getPlayerSelection();
+
+        if (pieceSelected.isEmpty()) {
+            System.out.println("No Piece is Selected");
+            return;
+        }
+
+        TakGame.Piece gamePiece = pieceSelected.get(0);
+        Piece piece = gamePiece.getBoardPiece();
+
+        if (!piece.getOnBoard() && game.isValidPlacement(toRow, toColumn)) {
+            game.placePiece(toRow, toColumn);
+        } else if (piece.getOnBoard() && game.isValidMove(toRow, toColumn)) {
+            game.moveStack(toRow, toColumn);
+        } else {
+            System.out.println("Invalid Move");
+            return;
+        }
+
+        if (pieceSelected.isEmpty()) {
+            if (!Objects.equals(game.getMoves().peek(), game.getBoardString())) {
+                game.toNextTurn();
+                System.out.println(game.getBoardString());
+                color = game.getCurrentPlayer().getColor();
+
+                if (color == Colors.WHITE) {
+                    angleY.set(0);
+                    angleX.set(50);
+                } else {
+                    angleY.set(180);
+                    angleX.set(50);
+                }
+                isMovingStack = false;
+            }
+        } else {
+            isMovingStack = true;
+        }
+
+        loadBoard(game);
+    }
+
+    public boolean isMovable(Piece piece, TakGame game) {
+        Stack<TakGame.Piece> square = game.getSquare(piece.getRow(), piece.getColumn());
+        TakGame.Piece gamePiece = square.peek();
+
+        if (!gamePiece.getColor().equals(color)) return false;
+
+        return gamePiece.getType().equals(PieceType.FLAT) || piece.getOrder() == gamePiece.getOrder();
+    }
+
+    public void setCoordinate(Piece piece, int row, int column, int order) {
+        int XOffset = (column * 110) - (SIZE - 1) * 55;
+        int YOffset = (int) (-11 - (order * 11) - (piece.getHeight() / 2));
+        int ZOffset = (row * 110) - (SIZE - 1) * 55;
+
+        piece.translateXProperty().set(XOffset);
+        piece.translateYProperty().set(YOffset);
+        piece.translateZProperty().set(ZOffset);
+
+        piece.setBoardPositionX(XOffset);
+        piece.setBoardPositionY(YOffset);
+        piece.setBoardPositionZ(ZOffset);
+    }
+
+    public void setCoordinate(Piece piece, int stack, int order){
+        int XOffset = (SIZE * 55 - 55) * -1 + (stack * 110);
+        int YOffset = (int) (-11 - (order * 11) - (piece.getHeight() / 2));
+        int ZOffset = (SIZE * 55 + 115);
+
+        if (piece.getColor() == Colors.WHITE) ZOffset *= -1;
+
+        piece.translateXProperty().set(XOffset);
+        piece.translateYProperty().set(YOffset);
+        piece.translateZProperty().set(ZOffset);
+
+        piece.setBoardPositionX(XOffset);
+        piece.setBoardPositionY(YOffset);
+        piece.setBoardPositionZ(ZOffset);
+    }
+
+    public void playerPieceBehavior(Piece piece, TakGame game) {
+        if (piece.getColor() != game.getCurrentPlayer().getColor()) return;
+
+        if (game.getPlayerSelection().isEmpty()) {
+            undoSelection(game);
+            game.setSelection(piece.getGamePiece());
+
+            piece.translateYProperty().set(-236);
+
+        } else if (game.getPlayerSelection().get(0) != piece.getGamePiece()) {
+            return;
+        } else if (piece.getType() == PieceType.FLAT) {
+            piece.setType(PieceType.STANDING);
+            convertPieceShape(piece, PieceType.STANDING);
+        } else if (piece.getType() == PieceType.STANDING) {
+            piece.setType(PieceType.FLAT);
+            convertPieceShape(piece, PieceType.FLAT);
+        }
+    }
+
+    public void boardPieceBehavior(Piece piece, TakGame game) {
+        if (!game.getPlayerSelection().isEmpty()) {
+            movePiece(piece.getRow(), piece.getColumn(), game);
+            return;
+        }
+
+        if (!isMovable(piece, game)) return;
+
+        getSelection(piece, game, true);
     }
 
     class SmartGroup extends Group {
@@ -480,11 +601,47 @@ public class HelloApplication extends Application {
 
     class Piece extends Box{
 
-        TakGame.Piece gamePiece;
-        Colors color;
+        private TakGame.Piece gamePiece;
+        private Boolean onBoard;
+
+        public Boolean getOnBoard() {
+            return onBoard;
+        }
+
+        public void setOnBoard(Boolean onBoard) {
+            this.onBoard = onBoard;
+        }
+
+        int boardPositionX, boardPositionY, boardPositionZ;
+
+        public void setBoardPositionX(int boardPositionX) {
+            this.boardPositionX = boardPositionX;
+        }
+
+        int getBoardPositionX() {
+            return boardPositionX;
+        }
+
+        public int getBoardPositionY() {
+            return boardPositionY;
+        }
+
+        public void setBoardPositionY(int boardPositionY) {
+            this.boardPositionY = boardPositionY;
+        }
+
+        public int getBoardPositionZ() {
+            return boardPositionZ;
+        }
+
+        public void setBoardPositionZ(int boardPositionZ) {
+            this.boardPositionZ = boardPositionZ;
+        }
+
 
         void setGamePiece(TakGame.Piece gamePiece) {
             this.gamePiece = gamePiece;
+            gamePiece.setBoardPiece(this);
         }
 
         TakGame.Piece getGamePiece() {
@@ -495,11 +652,11 @@ public class HelloApplication extends Application {
             return gamePiece.getColor();
         }
 
-        void setRow (int row) {
+        void setRow(int row) {
             gamePiece.setRow(row);
         }
 
-        void setColumn (int column) {
+        void setColumn(int column) {
             gamePiece.setRow(column);
         }
 
@@ -516,6 +673,12 @@ public class HelloApplication extends Application {
         }
 
         int getOrder() {return gamePiece.getOrder();}
+
+        void setType(PieceType type) {
+            gamePiece.setType(type);
+        }
+
+        PieceType getType() {return gamePiece.getType();}
 
     }
 

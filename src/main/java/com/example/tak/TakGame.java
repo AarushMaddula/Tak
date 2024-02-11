@@ -10,11 +10,13 @@ public class TakGame {
 
     private Stack<Piece>[][] board;
 
-    private Stack<Piece> playerSelection;
+    private Stack<Piece> playerSelection = new Stack<>();
+
+    public Direction direction = null;
 
     private ArrayList<Player> players = new ArrayList<>();
 
-    private ArrayList<String> moves = new ArrayList<>();
+    private Stack<String> moves = new Stack<>();
 
     TakGame(int size) {
         board = new Stack[size][size];
@@ -26,13 +28,29 @@ public class TakGame {
         }
 
         this.size = size;
-        makePlayers();
+
+        Colors[] colors = {Colors.WHITE, Colors.BLACK};
+
+        for (Colors color : colors) {
+            Player player = new Player(color, size);
+            player.setNormalPieceCount(getNumNormalPieces(size));
+            player.setBishopPieceCount(getNumBishopPieces(size));
+            players.add(player);
+        }
+
         moves.add(getBoardString());
     }
 
     TakGame(String boardString) {
         size = getSizeFromBoard(boardString);
-        makePlayers();
+
+        Colors[] colors = {Colors.WHITE, Colors.BLACK};
+
+        for (Colors color : colors) {
+            Player player = new Player(color, size);
+            players.add(player);
+        }
+
         setBoardString(boardString);
         moves.add(getBoardString());
     }
@@ -48,28 +66,24 @@ public class TakGame {
             for (int c = 0; c < size; c++) {
                 Stack<Piece> square = board[r][c];
 
-                if (square.empty()) countEmpty++;
-                else if (countEmpty != 0) {
+                if (square.isEmpty()) {
+                    countEmpty++;
+                    continue;
+                } else if (countEmpty != 0) {
                     boardString.append(countEmpty);
                     countEmpty = 0;
                 }
 
                 boardString.append("[");
 
-                Iterator<Piece> stack = square.iterator();
-
-                while (stack.hasNext()) {
-                    Piece piece = stack.next();
+                for (Piece piece : square) {
                     PieceType type = piece.getType();
                     Colors color = piece.getColor();
 
                     switch (type) {
-                        case FLAT:
-                            boardString.append(color == Colors.WHITE ? "f" : "F");
-                        case STANDING:
-                            boardString.append(color == Colors.WHITE ? "s" : "S");
-                        case BISHOP:
-                            boardString.append(color == Colors.WHITE ? "b" : "B");
+                        case FLAT -> boardString.append(color == Colors.WHITE ? "f" : "F");
+                        case STANDING -> boardString.append(color == Colors.WHITE ? "s" : "S");
+                        case BISHOP -> boardString.append(color == Colors.WHITE ? "b" : "B");
                     }
                 }
 
@@ -80,6 +94,8 @@ public class TakGame {
                 boardString.append(countEmpty);
                 countEmpty = 0;
             }
+
+            if (r != size - 1) boardString.append("|");
         }
 
         return boardString.toString();
@@ -87,7 +103,7 @@ public class TakGame {
 
     public void setBoardString(String fullBoardString) {
         String[] boardStringSplit = fullBoardString.split("\\.");
-        turn = Integer.getInteger(boardStringSplit[0]);
+        turn = Integer.parseInt(boardStringSplit[0]);
         String boardString = boardStringSplit[1];
 
         int row = 0;
@@ -108,11 +124,12 @@ public class TakGame {
             char c = boardString.charAt(i);
 
             if (Character.isDigit(c)) {
-                column += c;
+                for (int j = 0; j < c - '0'; j++) {
+                    board[row][column] = new Stack<>();
+                    column++;
+                }
                 continue;
             } else if (c == '[') {
-                column++;
-                square.empty();
                 continue;
             } else if (c == '|') {
                 row++;
@@ -120,6 +137,8 @@ public class TakGame {
                 continue;
             } else if (c == ']') {
                 board[row][column] = square;
+                square = new Stack<>();
+                column++;
                 continue;
             }
 
@@ -128,14 +147,10 @@ public class TakGame {
             PieceType type = null;
 
             switch (Character.toLowerCase(c)) {
-                case 'f':
-                    type = PieceType.FLAT;
-                case 's':
-                    type = PieceType.STANDING;
-                case 'b':
-                    type = PieceType.BISHOP;
-                default:
-                    System.out.println("INVALID PIECE TYPE IN BOARD STRING");
+                case 'f' -> type = PieceType.FLAT;
+                case 's' -> type = PieceType.STANDING;
+                case 'b' -> type = PieceType.BISHOP;
+                default -> System.out.println("INVALID PIECE TYPE IN BOARD STRING");
             }
 
             if (color == Colors.WHITE) {
@@ -154,55 +169,73 @@ public class TakGame {
 
 
             Piece piece = new Piece(color, type);
+
+            piece.setOrder(square.size());
+            piece.setRow(row);
+            piece.setColumn(column);
+
             square.push(piece);
         }
 
         for (Player player : players) {
             if (player.getColor() == Colors.WHITE) {
-                player.setPieceCount(PieceType.FLAT, getNumNormalPieces(size) - numNormalPiecesWhite);
-                player.setPieceCount(PieceType.BISHOP, getNumBishopPieces(size) - numBishopsWhite);
+                player.setNormalPieceCount(getNumNormalPieces(size) - numNormalPiecesWhite);
+                player.setBishopPieceCount(getNumBishopPieces(size) - numBishopsWhite);
 
             } else {
-                player.setPieceCount(PieceType.FLAT, getNumNormalPieces(size) - numNormalPiecesBlack);
-                player.setPieceCount(PieceType.BISHOP, getNumBishopPieces(size) - numBishopsBlack);
+                player.setNormalPieceCount(getNumNormalPieces(size) - numNormalPiecesBlack);
+                player.setBishopPieceCount(getNumBishopPieces(size) - numBishopsBlack);
             }
         }
 
     }
 
     class Player {
-        int numNormalPieces;
-        int numBishops;
+
+        ArrayList<Stack<Piece>> playerPieces;
         Colors color;
 
-        Player (Colors color) {
+        Player (Colors color, int size) {
             this.color = color;
-        }
+            this.playerPieces = new ArrayList<>();
 
-        public Piece getPiece(PieceType type) {
-            Piece piece = new Piece(color, type);
-            if (type.equals(PieceType.FLAT) || type.equals(PieceType.STANDING)) {
-                numNormalPieces--;
-            } else {
-                numBishops--;
+            for (int i = 0; i < size; i++) {
+                playerPieces.add(new Stack<Piece>());
             }
-            return piece;
         }
 
-        public int getNumNormalPieces() {
-            return numNormalPieces;
-        }
-
-        public int getNumBishops() {
-            return numBishops;
-        }
-
-        public void setPieceCount(PieceType type, int count) {
-            if (type.equals(PieceType.FLAT) || type.equals(PieceType.STANDING)) {
-                numNormalPieces = count;
-            } else {
-                numBishops = count;
+        public void removePiece(Piece piece) {
+            for (Stack<Piece> stack: playerPieces) {
+                stack.remove(piece);
             }
+        }
+
+        public void setBishopPieceCount(int numPieces) {
+            int size = playerPieces.size();
+
+            for (int i = 0; i < numPieces; i++) {
+                Piece bishop = new Piece(color, PieceType.BISHOP);
+
+                bishop.setOrder(0);
+                playerPieces.get((size - 1) - i).add(bishop);
+            }
+        }
+
+        public void setNormalPieceCount(int numPieces) {
+            for (int i = 0; i < numPieces; i++) {
+                Piece normal = new Piece(color, PieceType.FLAT);
+
+                normal.setOrder(i % 15);
+                playerPieces.get(i / 15).add(normal);
+            }
+        }
+
+        public void addPiece(Piece piece) {
+
+        }
+
+        public ArrayList<Stack<Piece>> getPlayerPieces() {
+            return playerPieces;
         }
 
         public Colors getColor() {return color;}
@@ -211,6 +244,8 @@ public class TakGame {
     class Piece {
         PieceType type;
         Colors color;
+
+        HelloApplication.Piece boardPiece;
         int order, row, column;
 
         Piece (Colors color, PieceType type) {
@@ -251,34 +286,36 @@ public class TakGame {
         int getColumn() {
             return column;
         }
-    }
 
-    public boolean isValidMove(int row, int column, PieceType type) {
-        Stack<Piece> square = board[row][column];
-        if (type == PieceType.BISHOP && (square.isEmpty() || square.peek().getType() != PieceType.BISHOP)) return true;
-        if (!square.isEmpty()) return false;
-        return true;
-    }
-
-    public boolean isValidMove(int fromRow, int fromCol, int toRow, int toCol, int bottomIndex) {
-        Stack<Piece> square = board[fromRow][fromCol];
-        Stack<Piece> endSquare = board[toRow][toCol];
-
-        Player player = getCurrentPlayer();
-        Colors color = player.getColor();
-
-        Piece topPiece = square.peek();
-
-        if (topPiece.getType() == PieceType.BISHOP && square.size() != 1) return false;
-
-        if ((square.size() - bottomIndex) + endSquare.size() > size || topPiece.getColor() != color) {
-            return false;
+        public void setBoardPiece(HelloApplication.Piece boardPiece) {
+            this.boardPiece = boardPiece;
         }
+
+        public HelloApplication.Piece getBoardPiece() {
+            return boardPiece;
+        }
+    }
+
+    public boolean isValidPlacement(int row, int column) {
+        Stack<Piece> square = board[row][column];
+        return square.isEmpty();
+    }
+
+    public boolean isValidMove(int toRow, int toCol) {
+        if (playerSelection.isEmpty()) return false;
+
+        Stack<Piece> endSquare = board[toRow][toCol];
+        Piece piece = playerSelection.get(0);
+
+        int fromRow = piece.getRow();
+        int fromCol = piece.getColumn();
+
+        if (endSquare.size() == size) return false;
 
         if (!endSquare.isEmpty()) {
             Piece topEndPiece = endSquare.peek();
 
-            if (topEndPiece.getType() != PieceType.FLAT && !(square.peek().getType() == PieceType.BISHOP && square.size() == 1)) {
+            if (topEndPiece.getType() != PieceType.FLAT && !(piece.getType() == PieceType.BISHOP)) {
                 return false;
             }
 
@@ -286,60 +323,100 @@ public class TakGame {
 
         int totalOffset = Math.abs(toRow - fromRow) + Math.abs(toCol - fromCol);
 
-        if (totalOffset != 1) {
+        if (totalOffset > 1) {
+            return false;
+        }
+
+        if (direction != null && totalOffset != 0) {
+            int changeRow = toRow - fromRow;
+            int changeColumn = toCol - fromCol;
+
+            if (changeRow > 0 && direction == Direction.NORTH) {
+                return true;
+            } else if (changeRow < 0 && direction == Direction.SOUTH){
+                return true;
+            } else if (changeColumn > 0 && direction == Direction.EAST) {
+                return true;
+            } else if (changeColumn < 0 && direction == Direction.WEST) {
+                return true;
+            }
             return false;
         }
 
         return true;
     }
 
-    public void moveStack(int fromRow, int fromCol, int toRow, int toCol, int bottomIndex) {
-        Stack<Piece> square = board[fromRow][fromCol];
+    public void moveStack(int toRow, int toCol) {
         Stack<Piece> endSquare = board[toRow][toCol];
+        Piece piece = playerSelection.get(0);
 
-        List<Piece> subStack = new ArrayList<>();
+        if (direction == null) {
+            int fromRow = piece.getRow();
+            int fromCol = piece.getColumn();
 
-        int stackSize = square.size();
-        int count = 0;
-        for (int i = 0; i < stackSize; i++) {
-            Piece piece = square.get(count);
+            int changeRow = toRow - fromRow;
+            int changeColumn = toCol - fromCol;
 
-            if (count >= bottomIndex) {
-                square.remove(count);
-                subStack.add(piece);
-            } else {
-                count++;
+            if (changeRow > 0) {
+                direction = Direction.NORTH;
+            } else if (changeRow < 0){
+                direction = Direction.SOUTH;
+            } else if (changeColumn > 0) {
+                direction = Direction.EAST;
+            } else if (changeColumn < 0) {
+                direction = Direction.WEST;
             }
         }
 
-        if (!endSquare.isEmpty() && endSquare.peek().getType() == PieceType.STANDING) {
-            endSquare.peek().setType(PieceType.FLAT);
+        for (Piece selPiece : playerSelection) {
+            selPiece.setOrder(selPiece.getOrder() - 1);
+            selPiece.setRow(toRow);
+            selPiece.setColumn(toCol);
         }
+        piece.setOrder(endSquare.size());
 
-        //adds all selected pieces to final square
-        for (Piece piece: subStack) {
-            piece.setOrder(endSquare.size());
-            endSquare.add(piece);
+
+        if (piece.getType() == PieceType.BISHOP && !endSquare.isEmpty()) endSquare.peek().setType(PieceType.FLAT);
+
+        endSquare.add(piece);
+        playerSelection.remove(0);
+
+        if (playerSelection.isEmpty()) {
+            direction = null;
         }
-
-        //removes pieces from original square
-        int numTime = square.size() - bottomIndex;
-        for (int i = 0; i < numTime; i++) {
-            square.pop();
-        }
-
-        turn++;
-        moves.add(getBoardString());
     }
 
-    public void placePiece(int row, int column, Colors color, PieceType type) {
-        Player player = color == Colors.WHITE ? players.get(0) : players.get(1);
+    public void setSelection(Piece piece) {
+        int row = piece.getRow();
+        int column = piece.getColumn();
 
-        Piece piece = player.getPiece(type);
+        playerSelection.add(piece);
+
+        Stack<Piece> square = getSquare(row, column);
+        square.remove(piece);
+    }
+
+    public Stack<Piece> getPlayerSelection() {
+        return playerSelection;
+    }
+
+    public void placePiece(int row, int column) {
+        Piece piece = playerSelection.get(0);
+
+        Player player = piece.getColor() == Colors.WHITE ? players.get(0) : players.get(1);
+
+        player.removePiece(piece);
         Stack<Piece> square = board[row][column];
-        piece.setOrder(square.size());
-        square.add(piece);
 
+        piece.setOrder(square.size());
+        piece.setRow(row);
+        piece.setColumn(column);
+
+        square.add(piece);
+        playerSelection.remove(0);
+    }
+
+    public void toNextTurn() {
         turn++;
         moves.add(getBoardString());
     }
@@ -375,11 +452,6 @@ public class TakGame {
         };
     }
 
-    private void setNumPieces(int size, Player player) {
-        player.setPieceCount(PieceType.FLAT, getNumNormalPieces(size));
-        player.setPieceCount(PieceType.BISHOP, getNumBishopPieces(size));
-    }
-
     private int getSizeFromBoard(String fullBoardString) {
         int boardSize = 0;
 
@@ -390,7 +462,7 @@ public class TakGame {
             char c = boardString.charAt(i);
 
             if (Character.isDigit(c)) {
-                boardSize += c;
+                boardSize += c - '0';
             } else if (c == '[') {
                 boardSize++;
             } else if (c == '|') {
@@ -400,16 +472,6 @@ public class TakGame {
 
         return boardSize;
 
-    }
-
-    private void makePlayers() {
-        Colors[] colors = {Colors.WHITE, Colors.BLACK};
-
-        for (Colors color : colors) {
-            Player player = new Player(color);
-            setNumPieces(size, player);
-            players.add(player);
-        }
     }
 
     public Player getCurrentPlayer() {
@@ -424,5 +486,7 @@ public class TakGame {
         return players;
     }
 
-
+    public Stack<String> getMoves() {
+        return moves;
+    }
 }
