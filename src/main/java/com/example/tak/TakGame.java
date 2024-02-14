@@ -316,7 +316,6 @@ public class TakGame {
         turn++;
         moves.add(getBoardString());
 
-        if (isFinished() != null) System.out.println("Game Ended");
     }
 
     public Player isFinished() {
