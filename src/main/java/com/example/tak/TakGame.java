@@ -8,15 +8,15 @@ public class TakGame {
 
     private int size;
 
-    private Stack<Piece>[][] board;
+    private Stack<GamePiece>[][] board;
 
-    private Stack<Piece> playerSelection = new Stack<>();
+    private final Stack<GamePiece> playerSelection = new Stack<>();
 
-    public Direction direction = null;
+    private Direction direction = null;
 
-    private ArrayList<Player> players = new ArrayList<>();
+    private final ArrayList<Player> players = new ArrayList<>();
 
-    private Stack<String> moves = new Stack<>();
+    private final Stack<String> moves = new Stack<>();
 
     TakGame(int size) {
         board = new Stack[size][size];
@@ -64,7 +64,7 @@ public class TakGame {
 
         for (int r = 0; r < size; r++) {
             for (int c = 0; c < size; c++) {
-                Stack<Piece> square = board[r][c];
+                Stack<GamePiece> square = board[r][c];
 
                 if (square.isEmpty()) {
                     countEmpty++;
@@ -76,7 +76,7 @@ public class TakGame {
 
                 boardString.append("[");
 
-                for (Piece piece : square) {
+                for (GamePiece piece : square) {
                     PieceType type = piece.getType();
                     Colors color = piece.getColor();
 
@@ -118,7 +118,7 @@ public class TakGame {
         int numBishopsBlack = 0;
         int numNormalPiecesBlack = 0;
 
-        Stack<Piece> square = new Stack<>();
+        Stack<GamePiece> square = new Stack<>();
 
         for (int i = 0; i < boardString.length(); i++) {
             char c = boardString.charAt(i);
@@ -168,7 +168,7 @@ public class TakGame {
             }
 
 
-            Piece piece = new Piece(color, type);
+            GamePiece piece = new GamePiece(color, type);
 
             piece.setOrder(square.size());
             piece.setRow(row);
@@ -190,132 +190,28 @@ public class TakGame {
 
     }
 
-    class Player {
-
-        ArrayList<Stack<Piece>> playerPieces;
-        Colors color;
-
-        Player (Colors color, int size) {
-            this.color = color;
-            this.playerPieces = new ArrayList<>();
-
-            for (int i = 0; i < size; i++) {
-                playerPieces.add(new Stack<Piece>());
-            }
-        }
-
-        public void removePiece(Piece piece) {
-            for (Stack<Piece> stack: playerPieces) {
-                stack.remove(piece);
-            }
-        }
-
-        public void setBishopPieceCount(int numPieces) {
-            int size = playerPieces.size();
-
-            for (int i = 0; i < numPieces; i++) {
-                Piece bishop = new Piece(color, PieceType.BISHOP);
-
-                bishop.setOrder(0);
-                playerPieces.get((size - 1) - i).add(bishop);
-            }
-        }
-
-        public void setNormalPieceCount(int numPieces) {
-            for (int i = 0; i < numPieces; i++) {
-                Piece normal = new Piece(color, PieceType.FLAT);
-
-                normal.setOrder(i % 15);
-                playerPieces.get(i / 15).add(normal);
-            }
-        }
-
-        public void addPiece(Piece piece) {
-
-        }
-
-        public ArrayList<Stack<Piece>> getPlayerPieces() {
-            return playerPieces;
-        }
-
-        public Colors getColor() {return color;}
-    }
-
-    class Piece {
-        PieceType type;
-        Colors color;
-
-        HelloApplication.Piece boardPiece;
-        int order, row, column;
-
-        Piece (Colors color, PieceType type) {
-            this.color = color;
-            this.type = type;
-        }
-
-        public void setType(PieceType type) {
-            this.type = type;
-        }
-
-        public PieceType getType() {
-            return type;
-        }
-
-        public Colors getColor() {return color;}
-
-        public void setOrder(int order) {
-            this.order = order;
-        }
-
-        public int getOrder() {
-            return order;
-        }
-
-        void setRow (int row) {
-            this.row = row;
-        }
-
-        int getRow() {
-            return row;
-        }
-
-        void setColumn (int column) {
-            this.column = column;
-        }
-
-        int getColumn() {
-            return column;
-        }
-
-        public void setBoardPiece(HelloApplication.Piece boardPiece) {
-            this.boardPiece = boardPiece;
-        }
-
-        public HelloApplication.Piece getBoardPiece() {
-            return boardPiece;
-        }
-    }
-
     public boolean isValidPlacement(int row, int column) {
-        Stack<Piece> square = board[row][column];
+        Stack<GamePiece> square = board[row][column];
         return square.isEmpty();
     }
 
     public boolean isValidMove(int toRow, int toCol) {
         if (playerSelection.isEmpty()) return false;
 
-        Stack<Piece> endSquare = board[toRow][toCol];
-        Piece piece = playerSelection.get(0);
+        Stack<GamePiece> endSquare = board[toRow][toCol];
+        GamePiece piece = playerSelection.get(0);
 
         int fromRow = piece.getRow();
         int fromCol = piece.getColumn();
 
-        if (endSquare.size() == size) return false;
-
         if (!endSquare.isEmpty()) {
-            Piece topEndPiece = endSquare.peek();
+            GamePiece topEndPiece = endSquare.peek();
 
-            if (topEndPiece.getType() != PieceType.FLAT && !(piece.getType() == PieceType.BISHOP)) {
+            if (topEndPiece.getType() == PieceType.STANDING && !(piece.getType() == PieceType.BISHOP)) {
+                return false;
+            }
+
+            if (topEndPiece.getType() == PieceType.BISHOP) {
                 return false;
             }
 
@@ -347,8 +243,8 @@ public class TakGame {
     }
 
     public void moveStack(int toRow, int toCol) {
-        Stack<Piece> endSquare = board[toRow][toCol];
-        Piece piece = playerSelection.get(0);
+        Stack<GamePiece> endSquare = board[toRow][toCol];
+        GamePiece piece = playerSelection.get(0);
 
         if (direction == null) {
             int fromRow = piece.getRow();
@@ -368,7 +264,7 @@ public class TakGame {
             }
         }
 
-        for (Piece selPiece : playerSelection) {
+        for (GamePiece selPiece : playerSelection) {
             selPiece.setOrder(selPiece.getOrder() - 1);
             selPiece.setRow(toRow);
             selPiece.setColumn(toCol);
@@ -386,27 +282,27 @@ public class TakGame {
         }
     }
 
-    public void setSelection(Piece piece) {
+    public void setSelection(GamePiece piece) {
         int row = piece.getRow();
         int column = piece.getColumn();
 
         playerSelection.add(piece);
 
-        Stack<Piece> square = getSquare(row, column);
+        Stack<GamePiece> square = getSquare(row, column);
         square.remove(piece);
     }
 
-    public Stack<Piece> getPlayerSelection() {
+    public Stack<GamePiece> getPlayerSelection() {
         return playerSelection;
     }
 
     public void placePiece(int row, int column) {
-        Piece piece = playerSelection.get(0);
+        GamePiece piece = playerSelection.get(0);
 
         Player player = piece.getColor() == Colors.WHITE ? players.get(0) : players.get(1);
 
         player.removePiece(piece);
-        Stack<Piece> square = board[row][column];
+        Stack<GamePiece> square = board[row][column];
 
         piece.setOrder(square.size());
         piece.setRow(row);
@@ -419,10 +315,79 @@ public class TakGame {
     public void toNextTurn() {
         turn++;
         moves.add(getBoardString());
+
+        if (isFinished() != null) System.out.println("Game Ended");
     }
 
-    public boolean isFinished() {
-        return false;
+    public Player isFinished() {
+
+        //checks for a road
+
+        boolean whiteWin = false;
+        boolean blackWin = false;
+
+        Stack<GamePiece>[] row = board[0];
+
+        for (Stack<GamePiece> square : row) {
+            if (square.isEmpty()) continue;
+
+            GamePiece piece = square.peek();
+
+            if (isRoad(piece, new ArrayList<>(), Direction.NORTH)) {
+                if (piece.getColor() == Colors.WHITE) {
+                    whiteWin = true;
+                } else {
+                    blackWin = true;
+                }
+            }
+        }
+
+        for (int r = 0; r < size; r++) {
+            Stack<GamePiece> square = board[r][0];
+
+            if (square.isEmpty()) continue;
+
+            GamePiece piece = square.peek();
+
+            if (isRoad(piece, new ArrayList<>(), Direction.EAST)) {
+                if (piece.getColor() == Colors.WHITE) {
+                    whiteWin = true;
+                } else {
+                    blackWin = true;
+                }
+            }
+        }
+
+        if (whiteWin && blackWin) {
+            return getCurrentPlayer();
+        } else if (whiteWin) {
+            return players.get(0);
+        } else if (blackWin) {
+            return players.get(1);
+        }
+
+        boolean boardFilled = true;
+
+        for (int r = 0; r < size; r++) {
+            for (int c = 0; c < size; c++) {
+                Stack<GamePiece> square = board[r][c];
+
+                if (square.isEmpty()) {
+                    boardFilled = false;
+                    break;
+                }
+            }
+        }
+
+        if (boardFilled) return countPoints();
+
+        for (Player player: players) {
+            int pieces = player.getPlayerPieces().size();
+
+            if (pieces == 0) return countPoints();
+        }
+
+        return null;
     }
 
     private int getNumNormalPieces(int size) {
@@ -478,7 +443,7 @@ public class TakGame {
         return players.get(turn % 2);
     }
 
-    public Stack<Piece> getSquare(int row, int col) {
+    public Stack<GamePiece> getSquare(int row, int col) {
         return board[row][col];
     }
 
@@ -488,5 +453,115 @@ public class TakGame {
 
     public Stack<String> getMoves() {
         return moves;
+    }
+
+    private boolean isRoad(GamePiece currPiece, ArrayList<GamePiece> traveledPieces, Direction endSide) {
+
+        int row = currPiece.getRow();
+        int column = currPiece.getColumn();
+        Colors color = currPiece.getColor();
+
+        traveledPieces.add(currPiece);
+
+        boolean isConnected = false;
+
+        //base case
+
+        if (endSide == Direction.EAST && column == size - 1) {
+            return true;
+        }
+
+        if (endSide == Direction.WEST && column == 0) {
+            return true;
+        }
+
+        if (endSide == Direction.NORTH && row == size - 1) {
+            return true;
+        }
+
+        if (endSide == Direction.SOUTH && row == 0) {
+            return true;
+        }
+
+
+        //get north square
+        if (row + 1 < size) {
+            Stack<GamePiece> square = board[row + 1][column];
+
+            if (!square.isEmpty()) {
+                GamePiece topPiece = square.peek();
+
+                if (topPiece.getColor() == color && topPiece.getType() != PieceType.STANDING && !traveledPieces.contains(topPiece)) {
+                    if (isRoad(topPiece, traveledPieces, endSide)) isConnected = true;
+                }
+            }
+        }
+        //get south square
+        if (row - 1 >= 0) {
+            Stack<GamePiece> square = board[row - 1][column];
+
+            if (!square.isEmpty()) {
+
+                GamePiece topPiece = square.peek();
+
+                if (topPiece.getColor() == color && topPiece.getType() != PieceType.STANDING && !traveledPieces.contains(topPiece)) {
+                    if (isRoad(topPiece, traveledPieces, endSide)) isConnected = true;
+                }
+            }
+        }
+        //get east square
+        if (column + 1 < size) {
+            Stack<GamePiece> square = board[row][column + 1];
+            if (!square.isEmpty()) {
+                GamePiece topPiece = square.peek();
+
+                if (topPiece.getColor() == color && topPiece.getType() != PieceType.STANDING && !traveledPieces.contains(topPiece)) {
+                    if (isRoad(topPiece, traveledPieces, endSide)) isConnected = true;
+                }
+            }
+        }
+        //get west square
+        if (column - 1 >= 0) {
+            Stack<GamePiece> square = board[row][column - 1];
+
+            if (!square.isEmpty()) {
+                GamePiece topPiece = square.peek();
+
+                if (topPiece.getColor() == color && topPiece.getType() != PieceType.STANDING && !traveledPieces.contains(topPiece)) {
+                    if (isRoad(topPiece, traveledPieces, endSide)) isConnected = true;
+                }
+            }
+        }
+
+        return isConnected;
+    }
+
+    private Player countPoints() {
+
+        int intWhiteFlatPieces = 0;
+        int intBlackFlatPieces = 0;
+
+        for (int r = 0; r < size; r++) {
+            for (int c = 0; c < size; c++) {
+                Stack<GamePiece> square = board[r][c];
+
+                if (square.isEmpty()) continue;
+
+                GamePiece piece = square.peek();
+                if (piece.getColor() == Colors.WHITE && piece.getType() == PieceType.FLAT) {
+                    intWhiteFlatPieces++;
+                } else {
+                    intBlackFlatPieces++;
+                }
+            }
+        }
+
+        if (intWhiteFlatPieces > intBlackFlatPieces) {
+            return players.get(0);
+        } else if (intWhiteFlatPieces < intBlackFlatPieces) {
+            return players.get(1);
+        } else {
+            return null;
+        }
     }
 }
