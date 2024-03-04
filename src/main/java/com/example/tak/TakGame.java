@@ -1,8 +1,9 @@
 package com.example.tak;
 
+import java.io.Serializable;
 import java.util.*;
 
-public class TakGame {
+public class TakGame implements Serializable {
 
     private int turn;
 
@@ -18,6 +19,8 @@ public class TakGame {
 
     private final Stack<String> moves = new Stack<>();
 
+    private int currId = 0;
+
     TakGame(int size) {
         board = new Stack[size][size];
 
@@ -32,7 +35,7 @@ public class TakGame {
         Colors[] colors = {Colors.WHITE, Colors.BLACK};
 
         for (Colors color : colors) {
-            Player player = new Player(color, size);
+            Player player = new Player(color, size, this);
             player.setNormalPieceCount(getNumNormalPieces(size));
             player.setBishopPieceCount(getNumBishopPieces(size));
             players.add(player);
@@ -47,7 +50,7 @@ public class TakGame {
         Colors[] colors = {Colors.WHITE, Colors.BLACK};
 
         for (Colors color : colors) {
-            Player player = new Player(color, size);
+            Player player = new Player(color, size, this);
             players.add(player);
         }
 
@@ -173,6 +176,7 @@ public class TakGame {
             piece.setOrder(square.size());
             piece.setRow(row);
             piece.setColumn(column);
+            piece.setId(getCurrId());
 
             square.push(piece);
         }
@@ -282,7 +286,9 @@ public class TakGame {
         }
     }
 
-    public void setSelection(GamePiece piece) {
+    public void setSelection(int id) {
+        GamePiece piece = findGamePiece(id);
+
         int row = piece.getRow();
         int column = piece.getColumn();
 
@@ -290,6 +296,14 @@ public class TakGame {
 
         Stack<GamePiece> square = getSquare(row, column);
         square.remove(piece);
+    }
+
+    public void clearSelection() {
+        playerSelection.clear();
+    }
+
+    public void addPiece(GamePiece piece, int row, int column) {
+        this.getSquare(row, column).add(piece);
     }
 
     public Stack<GamePiece> getPlayerSelection() {
@@ -315,7 +329,7 @@ public class TakGame {
     public void toNextTurn() {
         turn++;
         moves.add(getBoardString());
-
+        System.out.println(getBoardString());
     }
 
     public Player isFinished() {
@@ -442,8 +456,16 @@ public class TakGame {
         return players.get(turn % 2);
     }
 
+    public Colors getCurrentColor() {
+        return getCurrentPlayer().getColor();
+    }
+
     public Stack<GamePiece> getSquare(int row, int col) {
         return board[row][col];
+    }
+
+    public Stack<GamePiece>[][] getBoard() {
+        return board;
     }
 
     public ArrayList<Player> getPlayers() {
@@ -459,6 +481,8 @@ public class TakGame {
         int row = currPiece.getRow();
         int column = currPiece.getColumn();
         Colors color = currPiece.getColor();
+
+        if (currPiece.getType() != PieceType.STANDING && currPiece.getColor() == color) return false;
 
         traveledPieces.add(currPiece);
 
@@ -490,9 +514,10 @@ public class TakGame {
             if (!square.isEmpty()) {
                 GamePiece topPiece = square.peek();
 
-                if (topPiece.getColor() == color && topPiece.getType() != PieceType.STANDING && !traveledPieces.contains(topPiece)) {
+                if (topPiece.getType() != PieceType.STANDING && topPiece.getColor() == color && !traveledPieces.contains(topPiece)) {
                     if (isRoad(topPiece, traveledPieces, endSide)) isConnected = true;
                 }
+
             }
         }
         //get south square
@@ -503,10 +528,9 @@ public class TakGame {
 
                 GamePiece topPiece = square.peek();
 
-                if (topPiece.getColor() == color && topPiece.getType() != PieceType.STANDING && !traveledPieces.contains(topPiece)) {
+                if (topPiece.getType() != PieceType.STANDING && topPiece.getColor() == color && !traveledPieces.contains(topPiece)) {
                     if (isRoad(topPiece, traveledPieces, endSide)) isConnected = true;
-                }
-            }
+                }            }
         }
         //get east square
         if (column + 1 < size) {
@@ -514,10 +538,9 @@ public class TakGame {
             if (!square.isEmpty()) {
                 GamePiece topPiece = square.peek();
 
-                if (topPiece.getColor() == color && topPiece.getType() != PieceType.STANDING && !traveledPieces.contains(topPiece)) {
+                if (topPiece.getType() != PieceType.STANDING && topPiece.getColor() == color && !traveledPieces.contains(topPiece)) {
                     if (isRoad(topPiece, traveledPieces, endSide)) isConnected = true;
-                }
-            }
+                }            }
         }
         //get west square
         if (column - 1 >= 0) {
@@ -526,7 +549,7 @@ public class TakGame {
             if (!square.isEmpty()) {
                 GamePiece topPiece = square.peek();
 
-                if (topPiece.getColor() == color && topPiece.getType() != PieceType.STANDING && !traveledPieces.contains(topPiece)) {
+                if (topPiece.getType() != PieceType.STANDING && topPiece.getColor() == color && !traveledPieces.contains(topPiece)) {
                     if (isRoad(topPiece, traveledPieces, endSide)) isConnected = true;
                 }
             }
@@ -562,5 +585,36 @@ public class TakGame {
         } else {
             return null;
         }
+    }
+
+    private GamePiece findGamePiece(int id) {
+        for (Player player: players) {
+            for (Stack<GamePiece> pieceStack : player.playerPieces) {
+                for (GamePiece piece : pieceStack) {
+                    if (piece.getId() == id) return piece;
+                }
+            }
+        }
+
+        for (Stack<GamePiece>[] row : board) {
+            for (Stack<GamePiece> column : row) {
+                for (GamePiece piece : column) {
+                    if (piece.getId() == id) return piece;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public int getCurrId() {
+        int result = currId;
+        currId++;
+        return result;
+    }
+
+    public void setGamePieceType(int id, PieceType type) {
+        GamePiece gamePiece = findGamePiece(id);
+        gamePiece.setType(type);
     }
 }

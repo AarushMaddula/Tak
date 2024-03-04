@@ -1,6 +1,8 @@
 package com.example.tak;
 
-public enum Colors {
+import java.io.Serializable;
+
+public enum Colors implements Serializable {
     WHITE,
     BLACK
 }

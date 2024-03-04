@@ -1,6 +1,8 @@
 package com.example.tak;
 
-public enum PieceType {
+import java.io.Serializable;
+
+public enum PieceType implements Serializable {
     FLAT,
     STANDING,
     BISHOP
