@@ -13,6 +13,7 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.util.Objects;
 
 public class sceneCollector {
 
@@ -33,7 +34,7 @@ public class sceneCollector {
         SmartGroup root = new SmartGroup();
         Scene scene = new Scene(root, stage.getWidth(), stage.getHeight(), true);
 
-        Image image = new Image(sceneCollector.class.getResourceAsStream("background.png"));
+        Image image = new Image(Objects.requireNonNull(sceneCollector.class.getResourceAsStream("background.png")));
         ImageView iv = new ImageView(image);
 
         iv.prefWidth(WIDTH);
@@ -71,7 +72,7 @@ public class sceneCollector {
         SmartGroup root = new SmartGroup();
         Scene scene = new Scene(root, stage.getWidth(), stage.getHeight(), true);
 
-        Image image = new Image(sceneCollector.class.getResourceAsStream("background.png"));
+        Image image = new Image(Objects.requireNonNull(sceneCollector.class.getResourceAsStream("background.png")));
         ImageView iv = new ImageView(image);
 
         iv.prefWidth(WIDTH);
@@ -123,6 +124,7 @@ public class sceneCollector {
             Client client = new Client();
             try {
                 client.startConnection("127.0.0.1", 5555);
+                //client.startConnection("0.tcp.ngrok.io", 16845);
             } catch (IOException | ClassNotFoundException ex) {
                 throw new RuntimeException(ex);
             }

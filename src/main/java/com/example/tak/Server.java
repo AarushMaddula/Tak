@@ -13,8 +13,6 @@ public class Server {
 
     private int SIZE;
 
-    private static int cId = 0;
-
     private static TakGame game = null;
 
     private static int numPlayers = 0;
@@ -88,8 +86,7 @@ public class Server {
                         default -> System.out.println("Error");
                     }
 
-                    msg.id = cId;
-                    cId++;
+                    msg.msgID = (int) input.get(input.size() - 1);
 
                     out.reset();
                     out.writeUnshared(msg);
@@ -98,11 +95,17 @@ public class Server {
                     System.out.println(input);
 
                     if (input.getFirst().equals("toNextTurn")) {
-                        for (ClientHandler clientHandler: clientHandlers) {
+                        Player gameFinished = game.isFinished();
+                        System.out.println(gameFinished);
 
-                            if (clientHandler.color != this.color) {
+                        for (ClientHandler clientHandler: clientHandlers) {
+                            if (clientHandler.color != this.color && gameFinished == null) {
                                 Message newMsg = new Message();
                                 newMsg.nextTurn = true;
+                                clientHandler.out.writeUnshared(newMsg);
+                            } else if (gameFinished != null) {
+                                Message newMsg = new Message();
+                                newMsg.gameFinished = gameFinished;
                                 clientHandler.out.writeUnshared(newMsg);
                             }
                         }

@@ -1,8 +1,13 @@
 package com.example.tak;
 
+import javafx.application.Platform;
+
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 
 public class Client {
     private static Socket clientSocket;
@@ -11,16 +16,20 @@ public class Client {
 
     private static GameInstance gameInstance = null;
 
-    private static MyThread currThread = null;
+    private static int currId = 0;
 
-    public void startConnection(String ip, int port) throws IOException, ClassNotFoundException {
+    private static final ArrayList<Message> msgs = new ArrayList<>();
+
+    public static void startConnection(String ip, int port) throws IOException, ClassNotFoundException {
         clientSocket = new Socket(ip, port);
         out = new ObjectOutputStream(clientSocket.getOutputStream());
         in = new ObjectInputStream(clientSocket.getInputStream());
+
+        new MyThread();
     }
 
-    public void setGameInstance(GameInstance gameInstance) {
-        this.gameInstance = gameInstance;
+    public static void setGameInstance(GameInstance gameInstance) {
+        Client.gameInstance = gameInstance;
     }
 
     static class MyThread implements Runnable {
@@ -31,7 +40,6 @@ public class Client {
         {
             t = new Thread(this);
             System.out.println("New thread: " + t);
-            currThread = this;
             t.start(); // Starting the thread
         }
 
@@ -40,43 +48,77 @@ public class Client {
         {
             Message msg;
 
-            boolean msgGot = false;
-
-            while (clientSocket.isConnected() && !msgGot) {
+            while (clientSocket.isConnected()) {
                 try {
                     msg = (Message) in.readUnshared();
                     if (msg.nextTurn) {
-                        msgGot = true;
-                        gameInstance.setCurrentColor(gameInstance.getInstanceColor());
-                        t.interrupt();
+                        gameInstance.toNextMove();
+                    } else if (msg.gameFinished != null) {
+                        Message finalMsg = msg;
+                        Platform.runLater(() -> gameInstance.endGame(finalMsg.gameFinished));
+                    } else {
+                        msgs.add(msg);
+
+                        msgs.removeIf(currMSG -> currMSG.dispose);
+
+                        System.out.println("Received MessageID: " + msg.msgID + " | " + msgs);
                     }
                 } catch (IOException | ClassNotFoundException e) {
-                    //System.out.println("err");
+                    System.out.println(e);
                 }
             }
         }
     }
 
-    public Colors getColor() throws IOException, ClassNotFoundException {
-        Message msg = (Message) in.readUnshared();
-        return msg.color;
+    public static Colors getColor() throws IOException, ClassNotFoundException {
+        boolean isReached = false;
+        Message msgRecieved = null;
+
+        while (!isReached) {
+            CopyOnWriteArrayList<Message> msgsCopy = new CopyOnWriteArrayList<>(msgs);
+
+            for (Message msg : msgsCopy) {
+                if (msg.color != null) {
+                    msgRecieved = msg;
+                    isReached = true;
+                    msg.dispose= true;
+                }
+            }
+        }
+
+        return msgRecieved.color;
     }
 
-    public Message sendRequest(ArrayList<Object> method) throws IOException, ClassNotFoundException {
-        if (currThread != null) currThread.t.interrupt();
+    public static Message sendRequest(ArrayList<Object> method) throws IOException, ClassNotFoundException {
+
+        int msgSentId = currId;
+        method.add(currId);
+        currId++;
 
         out.writeUnshared(method);
 
-        Message msg = (Message) in.readUnshared();
+        boolean isReached = false;
+        Message msgRecieved = null;
 
-        if (method.getFirst() == "toNextTurn") {
-            MyThread thread = new MyThread();
-            currThread = thread;
+        System.out.println("Sent MessageID: " + currId);
+
+        while (!isReached) {
+            CopyOnWriteArrayList<Message> msgsCopy = new CopyOnWriteArrayList<>(msgs);
+
+            for (Message msg : msgsCopy) {
+                if (msg.msgID == msgSentId) {
+                    msgRecieved = msg;
+                    isReached = true;
+                    msg.dispose= true;
+                }
+            }
         }
-        return msg;
+
+        return msgRecieved;
+
     }
 
-    public void stopConnection() throws IOException {
+    public static void stopConnection() throws IOException {
         in.close();
         out.close();
         clientSocket.close();

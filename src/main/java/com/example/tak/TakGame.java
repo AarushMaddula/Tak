@@ -374,7 +374,7 @@ public class TakGame implements Serializable {
         if (whiteWin && blackWin) {
             return getCurrentPlayer();
         } else if (whiteWin) {
-            return players.get(0);
+            return players.getFirst();
         } else if (blackWin) {
             return players.get(1);
         }
@@ -482,7 +482,7 @@ public class TakGame implements Serializable {
         int column = currPiece.getColumn();
         Colors color = currPiece.getColor();
 
-        if (currPiece.getType() != PieceType.STANDING && currPiece.getColor() == color) return false;
+        if (currPiece.getType() == PieceType.STANDING) return false;
 
         traveledPieces.add(currPiece);
 

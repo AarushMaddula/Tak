@@ -1,15 +1,22 @@
 package com.example.tak;
 
+import javafx.animation.AnimationTimer;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.scene.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
@@ -24,34 +31,22 @@ public class GameInstance {
     private double anchorX, anchorY;
     private double anchorAngleX = 0;
     private double anchorAngleY = 0;
-
     private final DoubleProperty angleX = new SimpleDoubleProperty(0);
-
     private final DoubleProperty angleY = new SimpleDoubleProperty(0);
-
     private final int SIZE;
-
     private boolean isMovingStack = false;
-
-    Stage stageGlobal = null;
-
-    private TakGameHandler game;
-
-    private SmartGroup root;
-
-    private double WIDTH, HEIGHT;
-
+    private final TakGameHandler game;
+    private final SmartGroup root3D;
+    private final AnchorPane globalRoot;
+    private final double WIDTH, HEIGHT;
     private Colors instanceColor = null;
-
     boolean isMultiPlayer = false;
-
     private Colors currentColor;
 
     GameInstance(Stage stage, int size, Client client) {
         SIZE = size;
 
-        root = new SmartGroup();
-        Scene scene = new Scene(root, stage.getWidth(), stage.getHeight(), true);
+        root3D = new SmartGroup();
 
         WIDTH = stage.getWidth();
         HEIGHT = stage.getHeight();
@@ -60,28 +55,42 @@ public class GameInstance {
 
         if (client != null) {
             isMultiPlayer = true;
+
             try {
-                client.setGameInstance(this);
-                instanceColor = client.getColor();
+                Client.setGameInstance(this);
+                instanceColor = Client.getColor();
             } catch (IOException | ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
         }
+
         currentColor = game.getCurrentColor();
+        setAlignment();
+        initBoard(root3D);
 
-        System.out.println(instanceColor);
+        Button goBack = new Button();
+        goBack.prefWidth(100);
+        goBack.prefHeight(25);
+        goBack.setTranslateX(25);
+        goBack.setTranslateY(25);
+        goBack.setText("I can't do this!");
+        goBack.setOnAction(e -> sceneCollector.setSelectionScreen());
 
-        initBoard(root);
+        globalRoot = new AnchorPane();
+        Scene scene = new Scene(globalRoot, stage.getWidth(), stage.getHeight(), true);
 
+        SubScene sub = new SubScene(root3D, WIDTH, HEIGHT,true, SceneAntialiasing.BALANCED);
         Camera camera = new PerspectiveCamera();
 
-        scene.setCamera(camera);
-        scene.setFill(Color.ROYALBLUE);
-        root.translateXProperty().set(WIDTH/2);
-        root.translateYProperty().set(HEIGHT/2);
-        root.translateZProperty().set(250);
+        sub.setCamera(camera);
+        sub.setFill(Color.ROYALBLUE);
+        root3D.translateXProperty().set(WIDTH/2);
+        root3D.translateYProperty().set(HEIGHT/2);
+        root3D.translateZProperty().set(250);
 
-        initMouseControl(root, scene, stage);
+        initMouseControl(root3D, sub, stage);
+
+        globalRoot.getChildren().addAll(sub, goBack);
 
         stage.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             int offset = 45;
@@ -109,7 +118,6 @@ public class GameInstance {
                     break;
             }
         });
-
         stage.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
             if (event.getTarget().getClass() != BoardPiece.class && event.getTarget().getClass() != Square.class && !isMovingStack) {
                 undoSelection();
@@ -119,13 +127,9 @@ public class GameInstance {
         stage.setScene(scene);
         stage.show();
 
-        if (instanceColor != currentColor && isMultiPlayer) {
-            Client.MyThread thread = new Client.MyThread();
-        }
-
     }
 
-    private void initMouseControl(SmartGroup root, Scene scene, Stage stage) {
+    private void initMouseControl(SmartGroup root, SubScene scene, Stage stage) {
         Rotate xRotate;
         Rotate yRotate;
         root.getTransforms().addAll(
@@ -502,33 +506,17 @@ public class GameInstance {
             if (!Objects.equals(game.getMoves().peek(), game.getBoardString())) {
                 game.toNextTurn();
                 currentColor = currentColor == Colors.WHITE ? Colors.BLACK : Colors.WHITE;
-
-//                Player playerWon = game.isFinished();
-//
-//                if (playerWon != null) {
-//                    System.out.println("Game Ended! " + playerWon.getColor() + " won!");
-//                    Group root = new Group();
-//
-//                    Text text = new Text();
-//                    text.setText("Game Ended! " + playerWon.getColor() + " won!");
-//                    text.setTranslateX(WIDTH / 2);
-//                    text.setTranslateY(HEIGHT / 2);
-//
-//                    root.getChildren().add(text);
-//
-//                    Scene scene = new Scene(root, WIDTH, HEIGHT, true);
-//
-//                    stageGlobal.setScene(scene);
-//                }
-
-                if (currentColor == Colors.WHITE) {
-                    angleY.set(0);
-                    angleX.set(50);
-                } else {
-                    angleY.set(180);
-                    angleX.set(50);
-                }
                 isMovingStack = false;
+
+                if (isMultiPlayer) return;
+
+                setAlignment();
+
+                Player playerWon = game.isFinished();
+
+                if (playerWon != null) {
+                    endGame(playerWon);
+                }
             }
         } else {
             isMovingStack = true;
@@ -583,7 +571,7 @@ public class GameInstance {
     }
 
     public void playerPieceBehavior(BoardPiece piece) {
-        if (instanceColor != currentColor) return;
+        if (instanceColor != currentColor && isMultiPlayer) return;
         if (piece.getColor() != currentColor) return;
 
         Stack<GamePiece> stack = game.getPlayerSelection();
@@ -619,7 +607,7 @@ public class GameInstance {
     }
 
     public BoardPiece getBoardPiece(GamePiece gamePiece) {
-        for (Object object : root.getChildren()) {
+        for (Object object : root3D.getChildren()) {
             if (object.getClass() != BoardPiece.class) continue;
 
             if (((BoardPiece) object).getPieceId() != gamePiece.getId()) continue;
@@ -629,12 +617,54 @@ public class GameInstance {
         return null;
     }
 
-    public void setCurrentColor(Colors currentColor) {
-        this.currentColor = currentColor;
-        loadBoard();
+    public void setAlignment() {
+        if ((isMultiPlayer && instanceColor == Colors.WHITE) || (!isMultiPlayer && currentColor == Colors.WHITE)) {
+            angleY.set(0);
+            angleX.set(50);
+        } else {
+            angleY.set(180);
+            angleX.set(50);
+        }
     }
 
-    public Colors getInstanceColor() {
-        return instanceColor;
+    public void toNextMove() {
+        this.currentColor = instanceColor;
+        new nextTurnThread();
+    }
+
+    public void endGame(Player playerWon) {
+        System.out.println("Game Ended! " + playerWon.getColor() + " won!");
+
+        Rectangle bg = new Rectangle();
+
+        bg.setHeight(HEIGHT);
+        bg.setWidth(WIDTH);
+        bg.setFill(Color.BLACK);
+
+        bg.opacityProperty().set(0.5);
+
+        Text text = new Text();
+        text.setText("Game Ended! " + playerWon.getColor() + " won!");
+        text.setTranslateX(WIDTH / 2);
+        text.setTranslateY(HEIGHT / 2);
+
+        globalRoot.getChildren().addAll(text, bg);
+    }
+
+    class nextTurnThread implements Runnable {
+
+        Thread t;
+
+        nextTurnThread()
+        {
+            t = new Thread(this);
+            t.start(); // Starting the thread
+        }
+
+        // execution of thread starts from run() method
+        public void run()
+        {
+            loadBoard();
+        }
     }
 }

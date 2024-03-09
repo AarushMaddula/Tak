@@ -7,9 +7,9 @@ import java.util.Stack;
 
 public class Message implements Serializable {
 
-    public Colors color;
+    public int msgID = -1;
 
-    int id;
+    public Colors color = null;
 
     boolean nextTurn = false;
 
@@ -28,6 +28,10 @@ public class Message implements Serializable {
     public Stack<String> moves = new Stack<>();
 
     public ArrayList<Object> method = new ArrayList<>();
+
+    public boolean dispose = false;
+
+    public Player gameFinished = null;
 
 
 }
