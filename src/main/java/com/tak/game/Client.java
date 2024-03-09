@@ -1,11 +1,10 @@
-package com.example.tak;
+package com.tak.game;
 
 import javafx.application.Platform;
 
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 

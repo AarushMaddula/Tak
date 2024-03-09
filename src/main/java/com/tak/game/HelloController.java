@@ -1,4 +1,4 @@
-package com.example.tak;
+package com.tak.game;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;

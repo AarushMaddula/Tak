@@ -1,4 +1,4 @@
-package com.example.tak;
+package com.tak.game;
 
 import javafx.scene.Group;
 import javafx.scene.transform.Rotate;

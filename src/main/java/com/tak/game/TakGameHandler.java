@@ -1,4 +1,4 @@
-package com.example.tak;
+package com.tak.game;
 
 import java.io.IOException;
 import java.util.ArrayList;

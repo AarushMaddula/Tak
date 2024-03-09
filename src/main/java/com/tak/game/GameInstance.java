@@ -1,13 +1,9 @@
-package com.example.tak;
+package com.tak.game;
 
-import javafx.animation.AnimationTimer;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.*;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -169,7 +165,7 @@ public class GameInstance {
         //make board
         PhongMaterial boardTexture = new PhongMaterial();
         boardTexture.setDiffuseColor(Color.CHOCOLATE);
-        boardTexture.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/example/tak/boardTexture.jpg"))));
+        boardTexture.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/boardTexture.jpg"))));
 
         int length = (SIZE * 110) - 10 + 80;
 
@@ -178,7 +174,7 @@ public class GameInstance {
         root.getChildren().add(gameBoard);
 
         PhongMaterial squareTexture = new PhongMaterial();
-        squareTexture.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/example/tak/RockTextures.jpeg"))));
+        squareTexture.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/RockTextures.jpeg"))));
 
         //makes the lighting
 
@@ -296,9 +292,9 @@ public class GameInstance {
 
                     PhongMaterial mat4 = new PhongMaterial();
                     if (color == Colors.WHITE) {
-                        mat4.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/example/tak/WhitePiece.jpg"))));
+                        mat4.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/WhitePiece.jpg"))));
                     } else {
-                        mat4.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/example/tak/BlackPiece.jpg"))));
+                        mat4.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/BlackPiece.jpg"))));
                     }
 
                     piece.setMaterial(mat4);
@@ -338,9 +334,9 @@ public class GameInstance {
 
                     PhongMaterial mat = new PhongMaterial();
                     if (playerColor == Colors.WHITE) {
-                        mat.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/example/tak/WhitePiece.jpg"))));
+                        mat.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/WhitePiece.jpg"))));
                     } else {
-                        mat.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/example/tak/BlackPiece.jpg"))));
+                        mat.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/BlackPiece.jpg"))));
                     }
                     piece.setMaterial(mat);
 

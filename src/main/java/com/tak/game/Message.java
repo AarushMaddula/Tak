@@ -1,8 +1,7 @@
-package com.example.tak;
+package com.tak.game;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Objects;
 import java.util.Stack;
 
 public class Message implements Serializable {

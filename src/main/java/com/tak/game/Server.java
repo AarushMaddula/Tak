@@ -1,9 +1,8 @@
-package com.example.tak;
+package com.tak.game;
 
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
-import java.util.Stack;
 
 
 public class Server {

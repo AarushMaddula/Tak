@@ -1,4 +1,4 @@
-package com.example.tak;
+package com.tak.game;
 
 public enum Direction {
     NORTH,

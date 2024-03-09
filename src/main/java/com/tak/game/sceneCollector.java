@@ -1,4 +1,4 @@
-package com.example.tak;
+package com.tak.game;
 
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
