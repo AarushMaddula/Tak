@@ -84,9 +84,9 @@ public class TakGame implements Serializable {
                     Colors color = piece.getColor();
 
                     switch (type) {
-                        case FLAT -> boardString.append(color == Colors.WHITE ? "f" : "F");
-                        case STANDING -> boardString.append(color == Colors.WHITE ? "s" : "S");
-                        case BISHOP -> boardString.append(color == Colors.WHITE ? "b" : "B");
+                        case FLAT: boardString.append(color == Colors.WHITE ? "f" : "F");
+                        case STANDING: boardString.append(color == Colors.WHITE ? "s" : "S");
+                        case BISHOP: boardString.append(color == Colors.WHITE ? "b" : "B");
                     }
                 }
 
@@ -150,10 +150,10 @@ public class TakGame implements Serializable {
             PieceType type = null;
 
             switch (Character.toLowerCase(c)) {
-                case 'f' -> type = PieceType.FLAT;
-                case 's' -> type = PieceType.STANDING;
-                case 'b' -> type = PieceType.BISHOP;
-                default -> System.out.println("INVALID PIECE TYPE IN BOARD STRING");
+                case 'f': type = PieceType.FLAT;
+                case 's': type = PieceType.STANDING;
+                case 'b': type = PieceType.BISHOP;
+                default: System.out.println("INVALID PIECE TYPE IN BOARD STRING");
             }
 
             if (color == Colors.WHITE) {
@@ -374,7 +374,7 @@ public class TakGame implements Serializable {
         if (whiteWin && blackWin) {
             return getCurrentPlayer();
         } else if (whiteWin) {
-            return players.getFirst();
+            return players.get(0);
         } else if (blackWin) {
             return players.get(1);
         }
@@ -404,30 +404,31 @@ public class TakGame implements Serializable {
     }
 
     private int getNumNormalPieces(int size) {
-        return switch (size) {
-            case 3 -> 10;
-            case 4 -> 15;
-            case 5 -> 21;
-            case 6 -> 30;
-            case 7 -> 40;
-            case 8 -> 50;
-            default -> {
+        switch (size) {
+            case 3: return 10;
+            case 4: return 15;
+            case 5: return 21;
+            case 6: return 30;
+            case 7: return 40;
+            case 8: return 50;
+            default:
                 System.out.println("Size is invalid");
-                yield 0;
-            }
-        };
+                return 0;
+        }
     }
 
     private int getNumBishopPieces(int size) {
-        return switch (size) {
-            case 3, 4 -> 0;
-            case 5, 6 -> 1;
-            case 7, 8 -> 2;
-            default -> {
+        switch (size) {
+            case 3: return 0;
+            case 4: return 0;
+            case 5: return 1;
+            case 6: return 1;
+            case 7: return 2;
+            case 8: return 2;
+            default:
                 System.out.println("Size is invalid");
-                yield 0;
-            }
-        };
+                return 0;
+        }
     }
 
     private int getSizeFromBoard(String fullBoardString) {

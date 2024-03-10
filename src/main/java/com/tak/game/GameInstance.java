@@ -461,13 +461,13 @@ public class GameInstance {
         int[] dimensions = new int[3];
 
         switch (type) {
-            case FLAT -> dimensions = new int[]{80, 10, 80};
-            case STANDING -> {
+            case FLAT: dimensions = new int[]{80, 10, 80};
+            case STANDING: {
                 dimensions = new int[]{20, 50, 80};
                 Transform t = new Rotate(45, Rotate.Y_AXIS);
                 p.getTransforms().add(t);
             }
-            case BISHOP -> dimensions = new int[]{40, 80, 40};
+            case BISHOP: dimensions = new int[]{40, 80, 40};
         }
 
         p.setWidth(dimensions[0]);
@@ -484,7 +484,7 @@ public class GameInstance {
             return;
         }
 
-        GamePiece gamePiece = pieceSelected.getFirst();
+        GamePiece gamePiece = pieceSelected.get(0);
         BoardPiece piece = getBoardPiece(gamePiece);
 
         if (!piece.getOnBoard() && game.isValidPlacement(toRow, toColumn)) {
@@ -576,7 +576,7 @@ public class GameInstance {
 
             piece.translateYProperty().set(-236);
 
-        } else if (game.getPlayerSelection().getFirst().getId() != piece.getPieceId()) {
+        } else if (game.getPlayerSelection().get(0).getId() != piece.getPieceId()) {
             return;
         } else if (piece.getType() == PieceType.FLAT) {
             piece.setType(PieceType.STANDING);

@@ -62,27 +62,27 @@ public class Server {
                 while ((input = (ArrayList<Object>) in.readObject()) != null) {
                     Message msg = new Message();
 
-                    switch ((String) input.getFirst()) {
-                        case "getBoardString" -> msg.boardString = game.getBoardString();
-                        case "setBoardString" -> game.setBoardString((String) input.get(1));
-                        case "isValidPlacement" -> msg.isValidPlacement = game.isValidPlacement((int) input.get(1), (int) input.get(2));
-                        case "isValidMove" -> msg.isValidMove = game.isValidMove((int) input.get(1), (int) input.get(2));
-                        case "moveStack" -> game.moveStack((int) input.get(1), (int) input.get(2));
-                        case "setSelection" -> game.setSelection((int) input.get(1));
-                        case "getPlayerSelection" -> msg.gamePieces.addAll(game.getPlayerSelection());
-                        case "placePiece" -> game.placePiece((int) input.get(1), (int) input.get(2));
-                        case "toNextTurn" -> game.toNextTurn();
-                        case "isFinished" -> msg.player = game.isFinished();
-                        case "getCurrentPlayer" -> msg.player = game.getCurrentPlayer();
-                        case "getSquare" ->  msg.gamePieces.addAll(game.getSquare((int) input.get(1), (int) input.get(2)));
-                        case "getBoard" ->  msg.board = game.getBoard();
-                        case "getPlayers" ->  msg.players.addAll(game.getPlayers());
-                        case "getMoves" -> msg.moves.addAll(game.getMoves());
-                        case "clearSelection" -> game.clearSelection();
-                        case "addPiece" -> game.addPiece((GamePiece) input.get(1), (int) input.get(2), (int) input.get(3));
-                        case "getCurrentColor" -> msg.color = game.getCurrentColor();
-                        case "setGamePieceType" -> game.setGamePieceType((int) input.get(1), (PieceType) input.get(2));
-                        default -> System.out.println("Error");
+                    switch ((String) input.get(0)) {
+                        case "getBoardString": msg.boardString = game.getBoardString();
+                        case "setBoardString": game.setBoardString((String) input.get(1));
+                        case "isValidPlacement": msg.isValidPlacement = game.isValidPlacement((int) input.get(1), (int) input.get(2));
+                        case "isValidMove": msg.isValidMove = game.isValidMove((int) input.get(1), (int) input.get(2));
+                        case "moveStack": game.moveStack((int) input.get(1), (int) input.get(2));
+                        case "setSelection": game.setSelection((int) input.get(1));
+                        case "getPlayerSelection": msg.gamePieces.addAll(game.getPlayerSelection());
+                        case "placePiece": game.placePiece((int) input.get(1), (int) input.get(2));
+                        case "toNextTurn": game.toNextTurn();
+                        case "isFinished": msg.player = game.isFinished();
+                        case "getCurrentPlayer": msg.player = game.getCurrentPlayer();
+                        case "getSquare":  msg.gamePieces.addAll(game.getSquare((int) input.get(1), (int) input.get(2)));
+                        case "getBoard": msg.board = game.getBoard();
+                        case "getPlayers":  msg.players.addAll(game.getPlayers());
+                        case "getMoves": msg.moves.addAll(game.getMoves());
+                        case "clearSelection": game.clearSelection();
+                        case "addPiece": game.addPiece((GamePiece) input.get(1), (int) input.get(2), (int) input.get(3));
+                        case "getCurrentColor": msg.color = game.getCurrentColor();
+                        case "setGamePieceType": game.setGamePieceType((int) input.get(1), (PieceType) input.get(2));
+                        default: System.out.println("Error");
                     }
 
                     msg.msgID = (int) input.get(input.size() - 1);
@@ -93,7 +93,7 @@ public class Server {
 
                     System.out.println(input);
 
-                    if (input.getFirst().equals("toNextTurn")) {
+                    if (input.get(0).equals("toNextTurn")) {
                         Player gameFinished = game.isFinished();
                         System.out.println(gameFinished);
 
