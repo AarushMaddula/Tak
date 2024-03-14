@@ -13,6 +13,7 @@ public class App extends Application {
 
     @Override
     public void start(Stage stage) throws IOException {
+        //launches the game
         stage.setHeight(800);
         stage.setWidth(1400);
         stage.setTitle("Tak!");

@@ -3,6 +3,8 @@ package com.tak.game;
 import java.io.Serializable;
 import java.util.*;
 
+//processes and stores the data used in the game, essentially the backend
+
 public class TakGame implements Serializable {
 
     private int turn;
@@ -21,6 +23,7 @@ public class TakGame implements Serializable {
 
     private int currId = 0;
 
+    //init the game based on size
     TakGame(int size) {
         board = new Stack[size][size];
 
@@ -44,6 +47,7 @@ public class TakGame implements Serializable {
         moves.add(getBoardString());
     }
 
+    //init the game based on a given state
     TakGame(String boardString) {
         size = getSizeFromBoard(boardString);
 
@@ -58,6 +62,7 @@ public class TakGame implements Serializable {
         moves.add(getBoardString());
     }
 
+    //retrieves board state
     public String getBoardString() {
         // Format : turn, | = new row, [] = stack, bottom to top
         StringBuilder boardString = new StringBuilder();
@@ -104,6 +109,7 @@ public class TakGame implements Serializable {
         return boardString.toString();
     }
 
+    //sets board state based on string
     public void setBoardString(String fullBoardString) {
         String[] boardStringSplit = fullBoardString.split("\\.");
         turn = Integer.parseInt(boardStringSplit[0]);
@@ -194,11 +200,13 @@ public class TakGame implements Serializable {
 
     }
 
+    //checks if a piece can be placed on the board from the side
     public boolean isValidPlacement(int row, int column) {
         Stack<GamePiece> square = board[row][column];
         return square.isEmpty();
     }
 
+    //checks if a piece can be moved to a spot on the board
     public boolean isValidMove(int toRow, int toCol) {
         if (playerSelection.isEmpty()) return false;
 
@@ -246,6 +254,7 @@ public class TakGame implements Serializable {
         return true;
     }
 
+    //moves the player selection to the selected square & drops one piece
     public void moveStack(int toRow, int toCol) {
         Stack<GamePiece> endSquare = board[toRow][toCol];
         GamePiece piece = playerSelection.get(0);
@@ -286,6 +295,7 @@ public class TakGame implements Serializable {
         }
     }
 
+    //adds a piece to the player selection
     public void setSelection(int id) {
         GamePiece piece = findGamePiece(id);
 
@@ -298,18 +308,22 @@ public class TakGame implements Serializable {
         square.remove(piece);
     }
 
+    //clears the player selection
     public void clearSelection() {
         playerSelection.clear();
     }
 
+    //adds a piece to a given square
     public void addPiece(GamePiece piece, int row, int column) {
         this.getSquare(row, column).add(piece);
     }
 
+    //retrieves the player's selection
     public Stack<GamePiece> getPlayerSelection() {
         return playerSelection;
     }
 
+    //places a piece to a square
     public void placePiece(int row, int column) {
         GamePiece piece = playerSelection.get(0);
 
@@ -326,12 +340,14 @@ public class TakGame implements Serializable {
         playerSelection.remove(0);
     }
 
+    //switches to the next turn when called
     public void toNextTurn() {
         turn++;
         moves.add(getBoardString());
         System.out.println(getBoardString());
     }
 
+    //retrieves if the game is finished and who won
     public Player isFinished() {
 
         //checks for a road

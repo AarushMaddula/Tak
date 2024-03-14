@@ -13,6 +13,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
@@ -22,6 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Stack;
+
+//Builds & displays the game to the user using JavaFX library
 
 public class GameInstance {
     private double anchorX, anchorY;
@@ -34,18 +37,20 @@ public class GameInstance {
     private final TakGameHandler game;
     private final SmartGroup root3D;
     private final AnchorPane globalRoot;
-    private final double WIDTH, HEIGHT;
+    private final int WIDTH, HEIGHT;
     private Colors instanceColor = null;
     boolean isMultiPlayer = false;
     private Colors currentColor;
+
+    private final Alert alert;
 
     GameInstance(Stage stage, int size, Client client) {
         SIZE = size;
 
         root3D = new SmartGroup();
 
-        WIDTH = stage.getWidth();
-        HEIGHT = stage.getHeight();
+        WIDTH = (int) stage.getWidth();
+        HEIGHT = (int) stage.getHeight();
 
         this.game = new TakGameHandler(SIZE, client);
 
@@ -86,8 +91,6 @@ public class GameInstance {
 
         initMouseControl(root3D, sub, stage);
 
-        globalRoot.getChildren().addAll(sub, goBack);
-
         stage.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             int offset = 45;
 
@@ -114,17 +117,22 @@ public class GameInstance {
                     break;
             }
         });
+
         stage.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
             if (event.getTarget().getClass() != BoardPiece.class && event.getTarget().getClass() != Square.class && !isMovingStack) {
                 undoSelection();
             }
         });
 
+        alert = new Alert(WIDTH, HEIGHT);
+
+        globalRoot.getChildren().addAll(sub, goBack, alert);
+
         stage.setScene(scene);
         stage.show();
-
     }
 
+    //allows the player to move their camera around the board
     private void initMouseControl(SmartGroup root, SubScene scene, Stage stage) {
         Rotate xRotate;
         Rotate yRotate;
@@ -160,6 +168,7 @@ public class GameInstance {
         });
     }
 
+    //builds the board & pieces
     public void initBoard(SmartGroup root) {
 
         //make board
@@ -203,7 +212,7 @@ public class GameInstance {
                 square.setColumn(c);
 
                 square.setOnMouseClicked(e -> {
-                    if (!game.getPlayerSelection().isEmpty()) movePiece(square.getRow(), square.getColumn());
+                    movePiece(square.getRow(), square.getColumn());
                 });
 
                 root.getChildren().add(square);
@@ -346,6 +355,7 @@ public class GameInstance {
         }
     }
 
+    //refreshes the board each turn
     public void loadBoard() {
 
         Stack<GamePiece>[][] board = game.getBoard();
@@ -369,7 +379,6 @@ public class GameInstance {
         }
 
         //places all player pieces on the sides of board
-
         for (Player player: game.getPlayers()) {
 
             ArrayList<Stack<GamePiece>> playerPieces = player.getPlayerPieces();
@@ -395,6 +404,7 @@ public class GameInstance {
             }
         }
 
+        //places player selected pieces in respective spots
         Stack<GamePiece> playerSelection = game.getPlayerSelection();
 
         for (GamePiece gamePiece: playerSelection) {
@@ -410,6 +420,7 @@ public class GameInstance {
         }
     }
 
+    //retrieves the pieces currently selected by the player
     public void getSelection(BoardPiece piece, boolean addPieces) {
         Stack<GamePiece> selectedSquare = game.getSquare(piece.getRow(), piece.getColumn());
 
@@ -431,6 +442,7 @@ public class GameInstance {
         }
     }
 
+    //clears the player's selection & places pieces back to their original spots
     public void undoSelection() {
         Stack<GamePiece> pieceSelected = game.getPlayerSelection();
 
@@ -454,20 +466,21 @@ public class GameInstance {
         game.clearSelection();
     }
 
+    //changes the shape/type of the piece
     public void convertPieceShape(BoardPiece p, PieceType type) {
 
         p.getTransforms().clear();
 
         int[] dimensions = new int[3];
 
-        switch (type) {
-            case FLAT: dimensions = new int[]{80, 10, 80};
-            case STANDING: {
-                dimensions = new int[]{20, 50, 80};
-                Transform t = new Rotate(45, Rotate.Y_AXIS);
-                p.getTransforms().add(t);
-            }
-            case BISHOP: dimensions = new int[]{40, 80, 40};
+        if (type == PieceType.FLAT) {
+            dimensions = new int[]{80, 10, 80};
+        } else if (type == PieceType.STANDING) {
+            dimensions = new int[]{20, 50, 80};
+            Transform t = new Rotate(45, Rotate.Y_AXIS);
+            p.getTransforms().add(t);
+        } else if (type == PieceType.BISHOP) {
+            dimensions = new int[]{40, 80, 40};
         }
 
         p.setWidth(dimensions[0]);
@@ -475,12 +488,13 @@ public class GameInstance {
         p.setDepth(dimensions[2]);
     }
 
+    //moves the bottom piece of the player selection to the desired spot if possible
     public void movePiece(int toRow, int toColumn) {
 
         Stack<GamePiece> pieceSelected = game.getPlayerSelection();
 
         if (pieceSelected.isEmpty()) {
-            System.out.println("No Piece is Selected");
+            alert.setAlert("No Piece Selected!");
             return;
         }
 
@@ -489,10 +503,12 @@ public class GameInstance {
 
         if (!piece.getOnBoard() && game.isValidPlacement(toRow, toColumn)) {
             game.placePiece(toRow, toColumn);
+            alert.clearAlert();
         } else if (piece.getOnBoard() && game.isValidMove(toRow, toColumn)) {
             game.moveStack(toRow, toColumn);
+            alert.clearAlert();
         } else {
-            System.out.println("Invalid Move");
+            alert.setAlert("Invalid Move!");
             return;
         }
 
@@ -519,6 +535,7 @@ public class GameInstance {
         }
     }
 
+    //checks if a piece can be moved by a player
     public boolean isMovable(BoardPiece piece) {
         Stack<GamePiece> square = game.getSquare(piece.getRow(), piece.getColumn());
         GamePiece topGamePiece = square.peek();
@@ -530,6 +547,7 @@ public class GameInstance {
         return topGamePiece.getType().equals(PieceType.FLAT) || piece.getOrder() == topGamePiece.getOrder();
     }
 
+    //set the coordinate of a piece upon initialization (on a board)
     public void setCoordinate(BoardPiece piece, int row, int column, int order) {
         int XOffset = (column * 110) - (SIZE - 1) * 55;
         int YOffset = (int) (-11 - (order * 11) - (piece.getHeight() / 2));
@@ -548,6 +566,7 @@ public class GameInstance {
         piece.setOrder(order);
     }
 
+    //set the coordinate of a piece upon initialization (on the pieces on the side)
     public void setCoordinate(BoardPiece piece, int stack, int order){
         int XOffset = (SIZE * 55 - 55) * -1 + (stack * 110);
         int YOffset = (int) (-11 - (order * 11) - (piece.getHeight() / 2));
@@ -566,6 +585,7 @@ public class GameInstance {
         piece.setOrder(order);
     }
 
+    //sets the behavior of the pieces on the side of the board
     public void playerPieceBehavior(BoardPiece piece) {
         if (instanceColor != currentColor && isMultiPlayer) return;
         if (piece.getColor() != currentColor) return;
@@ -573,9 +593,8 @@ public class GameInstance {
         Stack<GamePiece> stack = game.getPlayerSelection();
         if (stack.isEmpty()) {
             game.setSelection(piece.getPieceId());
-
             piece.translateYProperty().set(-236);
-
+            alert.clearAlert();
         } else if (game.getPlayerSelection().get(0).getId() != piece.getPieceId()) {
             return;
         } else if (piece.getType() == PieceType.FLAT) {
@@ -591,6 +610,7 @@ public class GameInstance {
         }
     }
 
+    //sets the behavior of the pieces on the board
     public void boardPieceBehavior(BoardPiece piece) {
         if (!game.getPlayerSelection().isEmpty()) {
             movePiece(piece.getRow(), piece.getColumn());
@@ -600,8 +620,10 @@ public class GameInstance {
         if (!isMovable(piece)) return;
 
         getSelection(piece, true);
+        alert.clearAlert();
     }
 
+    //retrieves the boardPiece given the gamePiece
     public BoardPiece getBoardPiece(GamePiece gamePiece) {
         for (Object object : root3D.getChildren()) {
             if (object.getClass() != BoardPiece.class) continue;
@@ -613,6 +635,7 @@ public class GameInstance {
         return null;
     }
 
+    //sets the player's camera to the correct side based on player color
     public void setAlignment() {
         if ((isMultiPlayer && instanceColor == Colors.WHITE) || (!isMultiPlayer && currentColor == Colors.WHITE)) {
             angleY.set(0);
@@ -623,28 +646,37 @@ public class GameInstance {
         }
     }
 
+    //goes to next turn when called by server
     public void toNextMove() {
         this.currentColor = instanceColor;
         new nextTurnThread();
     }
 
+    //ends the game when called by server
     public void endGame(Player playerWon) {
-        System.out.println("Game Ended! " + playerWon.getColor() + " won!");
-
         Rectangle bg = new Rectangle();
 
         bg.setHeight(HEIGHT);
         bg.setWidth(WIDTH);
         bg.setFill(Color.BLACK);
-
         bg.opacityProperty().set(0.5);
 
-        Text text = new Text();
-        text.setText("Game Ended! " + playerWon.getColor() + " won!");
-        text.setTranslateX(WIDTH / 2);
-        text.setTranslateY(HEIGHT / 2);
+        Text winnerText = new Text();
+        winnerText.setFont(Font.font("Verdana", 20));
+        winnerText.setText("Game Ended! " + playerWon.getColor() + " won!");
+        winnerText.setTranslateX((WIDTH - winnerText.getLayoutBounds().getWidth()) / 2);
+        winnerText.setTranslateY(HEIGHT / 2);
+        winnerText.setFill(Color.WHITE);
 
-        globalRoot.getChildren().addAll(text, bg);
+        Button goBack = new Button();
+        goBack.setPrefWidth(250);
+        goBack.setPrefHeight(50);
+        goBack.setTranslateX((WIDTH - 250) / 2);
+        goBack.setTranslateY((HEIGHT * 2) / 3);
+        goBack.setText("Return");
+        goBack.setOnAction(e -> sceneCollector.setSelectionScreen());
+
+        globalRoot.getChildren().addAll(bg,winnerText, goBack);
     }
 
     class nextTurnThread implements Runnable {

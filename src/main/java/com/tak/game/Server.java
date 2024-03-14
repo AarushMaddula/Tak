@@ -62,27 +62,69 @@ public class Server {
                 while ((input = (ArrayList<Object>) in.readObject()) != null) {
                     Message msg = new Message();
 
+                    System.out.println(input);
+
                     switch ((String) input.get(0)) {
-                        case "getBoardString": msg.boardString = game.getBoardString();
-                        case "setBoardString": game.setBoardString((String) input.get(1));
-                        case "isValidPlacement": msg.isValidPlacement = game.isValidPlacement((int) input.get(1), (int) input.get(2));
-                        case "isValidMove": msg.isValidMove = game.isValidMove((int) input.get(1), (int) input.get(2));
-                        case "moveStack": game.moveStack((int) input.get(1), (int) input.get(2));
-                        case "setSelection": game.setSelection((int) input.get(1));
-                        case "getPlayerSelection": msg.gamePieces.addAll(game.getPlayerSelection());
-                        case "placePiece": game.placePiece((int) input.get(1), (int) input.get(2));
-                        case "toNextTurn": game.toNextTurn();
-                        case "isFinished": msg.player = game.isFinished();
-                        case "getCurrentPlayer": msg.player = game.getCurrentPlayer();
-                        case "getSquare":  msg.gamePieces.addAll(game.getSquare((int) input.get(1), (int) input.get(2)));
-                        case "getBoard": msg.board = game.getBoard();
-                        case "getPlayers":  msg.players.addAll(game.getPlayers());
-                        case "getMoves": msg.moves.addAll(game.getMoves());
-                        case "clearSelection": game.clearSelection();
-                        case "addPiece": game.addPiece((GamePiece) input.get(1), (int) input.get(2), (int) input.get(3));
-                        case "getCurrentColor": msg.color = game.getCurrentColor();
-                        case "setGamePieceType": game.setGamePieceType((int) input.get(1), (PieceType) input.get(2));
-                        default: System.out.println("Error");
+                        case "getBoardString":
+                            msg.boardString = game.getBoardString();
+                            break;
+                        case "setBoardString":
+                            game.setBoardString((String) input.get(1));
+                            break;
+                        case "isValidPlacement":
+                            msg.isValidPlacement = game.isValidPlacement((int) input.get(1), (int) input.get(2));
+                            break;
+                        case "isValidMove":
+                            msg.isValidMove = game.isValidMove((int) input.get(1), (int) input.get(2));
+                            break;
+                        case "moveStack":
+                            game.moveStack((int) input.get(1), (int) input.get(2));
+                            break;
+                        case "setSelection":
+                            game.setSelection((int) input.get(1));
+                            break;
+                        case "getPlayerSelection":
+                            msg.gamePieces.addAll(game.getPlayerSelection());
+                            break;
+                        case "placePiece":
+                            game.placePiece((int) input.get(1), (int) input.get(2));
+                            break;
+                        case "toNextTurn":
+                            game.toNextTurn();
+                            break;
+                        case "isFinished":
+                            msg.player = game.isFinished();
+                            break;
+                        case "getCurrentPlayer":
+                            msg.player = game.getCurrentPlayer();
+                            break;
+                        case "getSquare":
+                            msg.gamePieces.addAll(game.getSquare((int) input.get(1), (int) input.get(2)));
+                            break;
+                        case "getBoard":
+                            msg.board = game.getBoard();
+                            break;
+                        case "getPlayers":
+                            msg.players.addAll(game.getPlayers());
+                            break;
+                        case "getMoves":
+                            msg.moves.addAll(game.getMoves());
+                            break;
+                        case "clearSelection":
+                            game.clearSelection();
+                            break;
+                        case "addPiece":
+                            game.addPiece((GamePiece) input.get(1), (int) input.get(2), (int) input.get(3));
+                            break;
+                        case "getCurrentColor":
+                            msg.color = game.getCurrentColor();
+                            break;
+                        case "setGamePieceType":
+                            game.setGamePieceType((int) input.get(1), (PieceType) input.get(2));
+                            break;
+                        default:
+                            System.out.println("Error");
+                            break;
                     }
 
                     msg.msgID = (int) input.get(input.size() - 1);
