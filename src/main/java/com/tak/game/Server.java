@@ -4,13 +4,17 @@ import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 
-
+//Run this file to start the server
+//Creates the Server which manages the multiplayer mode
 public class Server {
+
+    private static final int PORT = 5555;
+
+    private static final int SIZE = 5;
+
     private ServerSocket serverSocket;
 
-    private static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
-
-    private int SIZE;
+    private static final ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
 
     private static TakGame game = null;
 
@@ -19,7 +23,7 @@ public class Server {
     public void start(int port) throws IOException {
         serverSocket = new ServerSocket(port);
 
-        game = new TakGame(5);
+        game = new TakGame(SIZE);
 
         while (true)
             new ClientHandler(serverSocket.accept()).start();
@@ -30,7 +34,6 @@ public class Server {
     }
 
     private static class ClientHandler extends Thread {
-
         private Colors color;
         private Socket clientSocket;
         private ObjectOutputStream out;
@@ -160,8 +163,9 @@ public class Server {
             }
         }
     }
+
     public static void main(String[] args) throws IOException {
         Server server = new Server();
-        server.start(5555);
+        server.start(PORT);
     }
 }

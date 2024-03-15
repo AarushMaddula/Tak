@@ -19,12 +19,10 @@ import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 import javafx.stage.Stage;
-import sun.security.ec.point.ProjectivePoint;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Objects;
-import java.util.Stack;
 
 //Builds & displays the game to the user using JavaFX library
 
@@ -720,12 +718,14 @@ public class GameInstance {
         goBack.setTranslateY((HEIGHT * 2) / 3);
         goBack.setText("Return");
         goBack.setOnAction(e -> {
-            try {
-                client.stopConnection();
-                sceneCollector.setSelectionScreen();
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
+            if (isMultiPlayer) {
+                try {
+                    client.stopConnection();
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
             }
+            sceneCollector.setSelectionScreen();
         });
 
         globalRoot.getChildren().addAll(bg,winnerText, goBack);
