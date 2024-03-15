@@ -93,7 +93,7 @@ public class Server {
                             game.toNextTurn();
                             break;
                         case "isFinished":
-                            msg.player = game.isFinished();
+                            msg.color = game.isFinished();
                             break;
                         case "getCurrentPlayer":
                             msg.player = game.getCurrentPlayer();
@@ -122,6 +122,8 @@ public class Server {
                         case "setGamePieceType":
                             game.setGamePieceType((int) input.get(1), (PieceType) input.get(2));
                             break;
+                        case "getPossibleMoves":
+                            msg.pieces.addAll(game.getPossibleMoves());
                         default:
                             System.out.println("Error");
                             break;
@@ -136,7 +138,7 @@ public class Server {
                     System.out.println(input);
 
                     if (input.get(0).equals("toNextTurn")) {
-                        Player gameFinished = game.isFinished();
+                        Colors gameFinished = game.isFinished();
                         System.out.println(gameFinished);
 
                         for (ClientHandler clientHandler: clientHandlers) {

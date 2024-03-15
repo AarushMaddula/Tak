@@ -12,7 +12,7 @@ public class Message implements Serializable {
 
     boolean nextTurn = false;
 
-    public Stack<GamePiece>[][] board;
+    public GameSquare[][] board;
 
     public ArrayList<Player> players = new ArrayList<>();
 
@@ -22,15 +22,18 @@ public class Message implements Serializable {
 
     public Player player;
 
-    public Stack<GamePiece> gamePieces = new Stack<>();
+    public GameSquare gamePieces = new GameSquare();
 
     public Stack<String> moves = new Stack<>();
 
     public ArrayList<Object> method = new ArrayList<>();
 
+    public ArrayList<GameSquare> pieces = new ArrayList<>();
+
+
     public boolean dispose = false;
 
-    public Player gameFinished = null;
+    public Colors gameFinished = null;
 
 
 }

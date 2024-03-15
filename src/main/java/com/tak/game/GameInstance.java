@@ -13,11 +13,13 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.Sphere;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 import javafx.stage.Stage;
+import sun.security.ec.point.ProjectivePoint;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,8 +41,10 @@ public class GameInstance {
     private final AnchorPane globalRoot;
     private final int WIDTH, HEIGHT;
     private Colors instanceColor = null;
-    boolean isMultiPlayer = false;
+    private boolean isMultiPlayer = false;
     private Colors currentColor;
+
+    private Client client;
 
     private final Alert alert;
 
@@ -52,14 +56,15 @@ public class GameInstance {
         WIDTH = (int) stage.getWidth();
         HEIGHT = (int) stage.getHeight();
 
-        this.game = new TakGameHandler(SIZE, client);
+        this.game = new TakGameHandler(size, client);
 
         if (client != null) {
             isMultiPlayer = true;
 
             try {
-                Client.setGameInstance(this);
-                instanceColor = Client.getColor();
+                this.client = client;
+                client.setGameInstance(this);
+                instanceColor = client.getColor();
             } catch (IOException | ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
@@ -277,12 +282,12 @@ public class GameInstance {
 
         }
 
-        Stack<GamePiece>[][] board = game.getBoard();
+        GameSquare[][] board = game.getBoard();
 
         //places all pieces on the board
         for (int row = 0; row < SIZE; row++) {
             for (int column = 0; column < SIZE; column++) {
-                Stack<GamePiece> square = board[row][column];
+                GameSquare square = board[row][column];
 
                 for (int order = 0; order < square.size(); order++) {
                     GamePiece gamepiece = square.get(order);
@@ -299,16 +304,26 @@ public class GameInstance {
                     convertPieceShape(piece, pieceType);
                     setCoordinate(piece, row, column, order);
 
-                    PhongMaterial mat4 = new PhongMaterial();
+                    piece.setOnMouseClicked(e -> boardPieceBehavior(piece));
+
+                    //sets color of piece
+                    PhongMaterial selectedMat = new PhongMaterial();
+                    PhongMaterial pieceMat = new PhongMaterial();
+
                     if (color == Colors.WHITE) {
-                        mat4.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/WhitePiece.jpg"))));
+                        pieceMat.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/WhitePiece.jpg"))));
+                        selectedMat.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/WhitePiece.jpg"))));
+                        selectedMat.setDiffuseColor(Color.GRAY);
                     } else {
-                        mat4.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/BlackPiece.jpg"))));
+                        pieceMat.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/BlackPiece.jpg"))));
+                        selectedMat.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/BlackPiece.jpg"))));
+                        selectedMat.setDiffuseColor(Color.GRAY);
                     }
 
-                    piece.setMaterial(mat4);
+                    piece.setMaterial(pieceMat);
 
-                    piece.setOnMouseClicked(e -> boardPieceBehavior(piece));
+                    piece.setOnMouseEntered(e -> piece.setMaterial(selectedMat));
+                    piece.setOnMouseExited(e -> piece.setMaterial(pieceMat));
 
                     root.getChildren().add(piece);
                 }
@@ -320,10 +335,10 @@ public class GameInstance {
         for (Player player: game.getPlayers()) {
 
             Colors playerColor = player.getColor();
-            ArrayList<Stack<GamePiece>> playerPieces = player.getPlayerPieces();
+            ArrayList<GameSquare> playerPieces = player.getPlayerPieces();
 
             for (int s = 0; s < playerPieces.size(); s++) {
-                Stack<GamePiece> stack = playerPieces.get(s);
+                GameSquare stack = playerPieces.get(s);
 
                 for (int order = 0; order < stack.size(); order++) {
                     BoardPiece piece = new BoardPiece();
@@ -341,13 +356,26 @@ public class GameInstance {
 
                     piece.setOnMouseClicked(e -> playerPieceBehavior(piece));
 
-                    PhongMaterial mat = new PhongMaterial();
+
+                    //sets color of piece
+                    PhongMaterial selectedMat = new PhongMaterial();
+                    PhongMaterial pieceMat = new PhongMaterial();
+
                     if (playerColor == Colors.WHITE) {
-                        mat.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/WhitePiece.jpg"))));
+                        pieceMat.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/WhitePiece.jpg"))));
+                        selectedMat.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/WhitePiece.jpg"))));
+                        selectedMat.setDiffuseColor(Color.GRAY);
                     } else {
-                        mat.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/BlackPiece.jpg"))));
+                        pieceMat.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/BlackPiece.jpg"))));
+                        selectedMat.setDiffuseMap(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/tak/game/BlackPiece.jpg"))));
+                        selectedMat.setDiffuseColor(Color.GRAY);
                     }
-                    piece.setMaterial(mat);
+
+                    piece.setMaterial(pieceMat);
+
+                    piece.setOnMouseEntered(e -> piece.setMaterial(selectedMat));
+
+                    piece.setOnMouseExited(e -> piece.setMaterial(pieceMat));
 
                     root.getChildren().add(piece);
                 }
@@ -358,12 +386,12 @@ public class GameInstance {
     //refreshes the board each turn
     public void loadBoard() {
 
-        Stack<GamePiece>[][] board = game.getBoard();
+        GameSquare[][] board = game.getBoard();
 
         //places all pieces on the board
         for (int row = 0; row < SIZE; row++) {
             for (int column = 0; column < SIZE; column++) {
-                Stack<GamePiece> square = board[row][column];
+                GameSquare square = board[row][column];
 
                 for (int order = 0; order < square.size(); order++) {
                     GamePiece gamePiece = square.get(order);
@@ -381,10 +409,10 @@ public class GameInstance {
         //places all player pieces on the sides of board
         for (Player player: game.getPlayers()) {
 
-            ArrayList<Stack<GamePiece>> playerPieces = player.getPlayerPieces();
+            ArrayList<GameSquare> playerPieces = player.getPlayerPieces();
 
             for (int s = 0; s < playerPieces.size(); s++) {
-                Stack<GamePiece> stack = playerPieces.get(s);
+                GameSquare stack = playerPieces.get(s);
 
                 for (int order = 0; order < stack.size(); order++) {
                     GamePiece gamePiece = stack.get(order);
@@ -404,8 +432,10 @@ public class GameInstance {
             }
         }
 
+        clearIndicators();
+
         //places player selected pieces in respective spots
-        Stack<GamePiece> playerSelection = game.getPlayerSelection();
+        GameSquare playerSelection = game.getPlayerSelection();
 
         for (GamePiece gamePiece: playerSelection) {
             BoardPiece boardPiece = getBoardPiece(gamePiece);
@@ -422,7 +452,7 @@ public class GameInstance {
 
     //retrieves the pieces currently selected by the player
     public void getSelection(BoardPiece piece, boolean addPieces) {
-        Stack<GamePiece> selectedSquare = game.getSquare(piece.getRow(), piece.getColumn());
+        GameSquare selectedSquare = game.getSquare(piece.getRow(), piece.getColumn());
 
         int size = selectedSquare.size();
         int order = 0;
@@ -444,7 +474,7 @@ public class GameInstance {
 
     //clears the player's selection & places pieces back to their original spots
     public void undoSelection() {
-        Stack<GamePiece> pieceSelected = game.getPlayerSelection();
+        GameSquare pieceSelected = game.getPlayerSelection();
 
 
         for (GamePiece gamePiece: pieceSelected) {
@@ -462,8 +492,10 @@ public class GameInstance {
 
             if (piece.getOnBoard()) game.addPiece(gamePiece, row, column);
         }
+        clearIndicators();
 
         game.clearSelection();
+        alert.clearAlert();
     }
 
     //changes the shape/type of the piece
@@ -491,7 +523,7 @@ public class GameInstance {
     //moves the bottom piece of the player selection to the desired spot if possible
     public void movePiece(int toRow, int toColumn) {
 
-        Stack<GamePiece> pieceSelected = game.getPlayerSelection();
+        GameSquare pieceSelected = game.getPlayerSelection();
 
         if (pieceSelected.isEmpty()) {
             alert.setAlert("No Piece Selected!");
@@ -524,20 +556,23 @@ public class GameInstance {
 
                 setAlignment();
 
-                Player playerWon = game.isFinished();
+                Colors playerWon = game.isFinished();
 
-                if (playerWon != null) {
+                if (playerWon != Colors.NONE) {
                     endGame(playerWon);
                 }
             }
         } else {
+            setIndicators();
             isMovingStack = true;
         }
     }
 
     //checks if a piece can be moved by a player
     public boolean isMovable(BoardPiece piece) {
-        Stack<GamePiece> square = game.getSquare(piece.getRow(), piece.getColumn());
+        if (!piece.getOnBoard()) return piece.getColor().equals(currentColor);
+
+        GameSquare square = game.getSquare(piece.getRow(), piece.getColumn());
         GamePiece topGamePiece = square.peek();
 
         if (isMultiPlayer && currentColor != instanceColor) return false;
@@ -588,9 +623,12 @@ public class GameInstance {
     //sets the behavior of the pieces on the side of the board
     public void playerPieceBehavior(BoardPiece piece) {
         if (instanceColor != currentColor && isMultiPlayer) return;
-        if (piece.getColor() != currentColor) return;
+        if (piece.getColor() != currentColor) {
+            alert.setAlert("Invalid Selection");
+            return;
+        }
 
-        Stack<GamePiece> stack = game.getPlayerSelection();
+        GameSquare stack = game.getPlayerSelection();
         if (stack.isEmpty()) {
             game.setSelection(piece.getPieceId());
             piece.translateYProperty().set(-236);
@@ -600,7 +638,6 @@ public class GameInstance {
         } else if (piece.getType() == PieceType.FLAT) {
             piece.setType(PieceType.STANDING);
             game.setGamePieceType(piece.getPieceId(), PieceType.STANDING);
-
             convertPieceShape(piece, PieceType.STANDING);
         } else if (piece.getType() == PieceType.STANDING) {
             piece.setType(PieceType.FLAT);
@@ -617,9 +654,14 @@ public class GameInstance {
             return;
         }
 
-        if (!isMovable(piece)) return;
+        if (!isMovable(piece)) {
+            alert.setAlert("Invalid Selection");
+            return;
+        }
 
         getSelection(piece, true);
+        setIndicators();
+
         alert.clearAlert();
     }
 
@@ -653,7 +695,7 @@ public class GameInstance {
     }
 
     //ends the game when called by server
-    public void endGame(Player playerWon) {
+    public void endGame(Colors playerWon) {
         Rectangle bg = new Rectangle();
 
         bg.setHeight(HEIGHT);
@@ -663,7 +705,10 @@ public class GameInstance {
 
         Text winnerText = new Text();
         winnerText.setFont(Font.font("Verdana", 20));
-        winnerText.setText("Game Ended! " + playerWon.getColor() + " won!");
+
+        if (playerWon == Colors.TIE) winnerText.setText("Game Ended! No one won!");
+        else winnerText.setText("Game Ended! " + playerWon + " won!");
+
         winnerText.setTranslateX((WIDTH - winnerText.getLayoutBounds().getWidth()) / 2);
         winnerText.setTranslateY(HEIGHT / 2);
         winnerText.setFill(Color.WHITE);
@@ -674,9 +719,59 @@ public class GameInstance {
         goBack.setTranslateX((WIDTH - 250) / 2);
         goBack.setTranslateY((HEIGHT * 2) / 3);
         goBack.setText("Return");
-        goBack.setOnAction(e -> sceneCollector.setSelectionScreen());
+        goBack.setOnAction(e -> {
+            try {
+                client.stopConnection();
+                sceneCollector.setSelectionScreen();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        });
 
         globalRoot.getChildren().addAll(bg,winnerText, goBack);
+    }
+
+    //makes the green balls indicating player moves
+    public void setIndicators() {
+        ArrayList<GameSquare> stacks = game.getPossibleMoves();
+
+        for (GameSquare square : stacks) {
+            int row = square.getRow();
+            int column = square.getColumn();
+            int numPieces = square.size();
+
+            int x = (column * 110) - (SIZE - 1) * 55;
+            int y = -11 - (numPieces * 11);
+            int z = (row * 110) - (SIZE - 1) * 55;
+
+            PhongMaterial indicatorTexture = new PhongMaterial();
+            indicatorTexture.setDiffuseColor(Color.LIMEGREEN);
+
+            Sphere indicator = new Sphere(10);
+            indicator.setMaterial(indicatorTexture);
+
+            indicator.setTranslateX(x);
+            indicator.setTranslateY(y - 25);
+            indicator.setTranslateZ(z);
+
+            root3D.getChildren().add(indicator);
+        }
+    }
+
+    //clears the green balls indicating player moves
+    public void clearIndicators() {
+        int numPieces = root3D.getChildren().size();
+        int index = 0;
+
+        for (int i = 0; i < numPieces; i++) {
+            Object o = root3D.getChildren().get(index);
+
+            if (o.getClass() == Sphere.class) {
+                root3D.getChildren().remove(o);
+            } else {
+                index++;
+            }
+        }
     }
 
     class nextTurnThread implements Runnable {

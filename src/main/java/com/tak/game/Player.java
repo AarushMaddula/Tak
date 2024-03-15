@@ -5,10 +5,9 @@ import java.util.ArrayList;
 import java.util.Stack;
 
 public class Player implements Serializable {
-    ArrayList<Stack<GamePiece>> playerPieces;
+    ArrayList<GameSquare> playerPieces;
     Colors color;
     Client client;
-
     TakGame game;
 
     Player (Colors color, int size, TakGame game) {
@@ -16,13 +15,13 @@ public class Player implements Serializable {
         this.playerPieces = new ArrayList<>();
 
         for (int i = 0; i < size; i++) {
-            playerPieces.add(new Stack<GamePiece>());
+            playerPieces.add(new GameSquare());
         }
         this.game = game;
     }
 
     public void removePiece(GamePiece piece) {
-        for (Stack<GamePiece> stack: playerPieces) {
+        for (GameSquare stack: playerPieces) {
             stack.remove(piece);
         }
     }
@@ -51,7 +50,7 @@ public class Player implements Serializable {
         }
     }
 
-    public ArrayList<Stack<GamePiece>> getPlayerPieces() {
+    public ArrayList<GameSquare> getPlayerPieces() {
         return playerPieces;
     }
 

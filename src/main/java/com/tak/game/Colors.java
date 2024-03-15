@@ -4,5 +4,7 @@ import java.io.Serializable;
 
 public enum Colors implements Serializable {
     WHITE,
-    BLACK
+    BLACK,
+    TIE,
+    NONE
 }

@@ -45,8 +45,8 @@ public class sceneCollector {
         button.setPrefWidth(250);
         button.setPrefHeight(50);
 
-        button.setTranslateX((WIDTH - 250) / 2);
-        button.setTranslateY((HEIGHT - 50) / 2);
+        button.setTranslateX((double) (WIDTH - 250) / 2);
+        button.setTranslateY((double) (HEIGHT - 50) / 2);
 
         button.setText("Play");
 
@@ -59,8 +59,8 @@ public class sceneCollector {
         text.setFont(Font.font ("Verdana", 80));
         text.setFill(Color.LIGHTYELLOW);
 
-        text.setTranslateX((WIDTH - 200) / 2);
-        text.setTranslateY((HEIGHT - 200) / 2);
+        text.setTranslateX((double) (WIDTH - 200) / 2);
+        text.setTranslateY((double) (HEIGHT - 200) / 2);
 
         root.getChildren().addAll(iv, button, text);
 

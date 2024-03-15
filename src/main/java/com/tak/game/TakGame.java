@@ -11,9 +11,9 @@ public class TakGame implements Serializable {
 
     private int size;
 
-    private Stack<GamePiece>[][] board;
+    private GameSquare[][] board;
 
-    private final Stack<GamePiece> playerSelection = new Stack<>();
+    private final GameSquare playerSelection = new GameSquare();
 
     private Direction direction = null;
 
@@ -25,11 +25,15 @@ public class TakGame implements Serializable {
 
     //init the game based on size
     TakGame(int size) {
-        board = new Stack[size][size];
+        board = new GameSquare[size][size];
 
         for (int r = 0; r < size; r++) {
             for (int c = 0; c < size; c++) {
-                board[r][c] = new Stack<>();
+                GameSquare square = new GameSquare();
+                square.setRow(r);
+                square.setColumn(c);
+
+                board[r][c] = square;
             }
         }
 
@@ -72,7 +76,7 @@ public class TakGame implements Serializable {
 
         for (int r = 0; r < size; r++) {
             for (int c = 0; c < size; c++) {
-                Stack<GamePiece> square = board[r][c];
+                GameSquare square = board[r][c];
 
                 if (square.isEmpty()) {
                     countEmpty++;
@@ -89,9 +93,15 @@ public class TakGame implements Serializable {
                     Colors color = piece.getColor();
 
                     switch (type) {
-                        case FLAT: boardString.append(color == Colors.WHITE ? "f" : "F");
-                        case STANDING: boardString.append(color == Colors.WHITE ? "s" : "S");
-                        case BISHOP: boardString.append(color == Colors.WHITE ? "b" : "B");
+                        case FLAT:
+                            boardString.append(color == Colors.WHITE ? "f" : "F");
+                            break;
+                        case STANDING:
+                            boardString.append(color == Colors.WHITE ? "s" : "S");
+                            break;
+                        case BISHOP:
+                            boardString.append(color == Colors.WHITE ? "b" : "B");
+                            break;
                     }
                 }
 
@@ -119,7 +129,7 @@ public class TakGame implements Serializable {
         int column = 0;
 
         size = getSizeFromBoard(fullBoardString);
-        board = new Stack[size][size];
+        board = new GameSquare[size][size];
 
         int numBishopsWhite = 0;
         int numNormalPiecesWhite = 0;
@@ -127,14 +137,18 @@ public class TakGame implements Serializable {
         int numBishopsBlack = 0;
         int numNormalPiecesBlack = 0;
 
-        Stack<GamePiece> square = new Stack<>();
+        GameSquare selectedSquare = new GameSquare();
 
         for (int i = 0; i < boardString.length(); i++) {
             char c = boardString.charAt(i);
 
             if (Character.isDigit(c)) {
                 for (int j = 0; j < c - '0'; j++) {
-                    board[row][column] = new Stack<>();
+                    GameSquare square = new GameSquare();
+                    square.setRow(row);
+                    square.setColumn(column);
+                    board[row][column] = square;
+
                     column++;
                 }
                 continue;
@@ -145,8 +159,8 @@ public class TakGame implements Serializable {
                 column = 0;
                 continue;
             } else if (c == ']') {
-                board[row][column] = square;
-                square = new Stack<>();
+                board[row][column] = selectedSquare;
+                selectedSquare = new GameSquare();
                 column++;
                 continue;
             }
@@ -156,10 +170,18 @@ public class TakGame implements Serializable {
             PieceType type = null;
 
             switch (Character.toLowerCase(c)) {
-                case 'f': type = PieceType.FLAT;
-                case 's': type = PieceType.STANDING;
-                case 'b': type = PieceType.BISHOP;
-                default: System.out.println("INVALID PIECE TYPE IN BOARD STRING");
+                case 'f':
+                    type = PieceType.FLAT;
+                    break;
+                case 's':
+                    type = PieceType.STANDING;
+                    break;
+                case 'b':
+                    type = PieceType.BISHOP;
+                    break;
+                default:
+                    System.out.println("INVALID PIECE TYPE IN BOARD STRING");
+                    break;
             }
 
             if (color == Colors.WHITE) {
@@ -179,12 +201,12 @@ public class TakGame implements Serializable {
 
             GamePiece piece = new GamePiece(color, type);
 
-            piece.setOrder(square.size());
+            piece.setOrder(selectedSquare.size());
             piece.setRow(row);
             piece.setColumn(column);
             piece.setId(getCurrId());
 
-            square.push(piece);
+            selectedSquare.push(piece);
         }
 
         for (Player player : players) {
@@ -202,15 +224,17 @@ public class TakGame implements Serializable {
 
     //checks if a piece can be placed on the board from the side
     public boolean isValidPlacement(int row, int column) {
-        Stack<GamePiece> square = board[row][column];
+        GameSquare square = board[row][column];
         return square.isEmpty();
     }
 
     //checks if a piece can be moved to a spot on the board
-    public boolean isValidMove(int toRow, int toCol) {
+    public boolean isValidMove(int row, int column) {
         if (playerSelection.isEmpty()) return false;
 
-        Stack<GamePiece> endSquare = board[toRow][toCol];
+        if (row < 0 || row >= size || column < 0 || column >= size) return false;
+
+        GameSquare endSquare = board[row][column];
         GamePiece piece = playerSelection.get(0);
 
         int fromRow = piece.getRow();
@@ -229,15 +253,15 @@ public class TakGame implements Serializable {
 
         }
 
-        int totalOffset = Math.abs(toRow - fromRow) + Math.abs(toCol - fromCol);
+        int totalOffset = Math.abs(row - fromRow) + Math.abs(column - fromCol);
 
         if (totalOffset > 1) {
             return false;
         }
 
         if (direction != null && totalOffset != 0) {
-            int changeRow = toRow - fromRow;
-            int changeColumn = toCol - fromCol;
+            int changeRow = row - fromRow;
+            int changeColumn = column - fromCol;
 
             if (changeRow > 0 && direction == Direction.NORTH) {
                 return true;
@@ -256,7 +280,7 @@ public class TakGame implements Serializable {
 
     //moves the player selection to the selected square & drops one piece
     public void moveStack(int toRow, int toCol) {
-        Stack<GamePiece> endSquare = board[toRow][toCol];
+        GameSquare endSquare = board[toRow][toCol];
         GamePiece piece = playerSelection.get(0);
 
         if (direction == null) {
@@ -304,7 +328,7 @@ public class TakGame implements Serializable {
 
         playerSelection.add(piece);
 
-        Stack<GamePiece> square = getSquare(row, column);
+        GameSquare square = getSquare(row, column);
         square.remove(piece);
     }
 
@@ -319,7 +343,7 @@ public class TakGame implements Serializable {
     }
 
     //retrieves the player's selection
-    public Stack<GamePiece> getPlayerSelection() {
+    public GameSquare getPlayerSelection() {
         return playerSelection;
     }
 
@@ -330,7 +354,7 @@ public class TakGame implements Serializable {
         Player player = piece.getColor() == Colors.WHITE ? players.get(0) : players.get(1);
 
         player.removePiece(piece);
-        Stack<GamePiece> square = board[row][column];
+        GameSquare square = board[row][column];
 
         piece.setOrder(square.size());
         piece.setRow(row);
@@ -348,16 +372,16 @@ public class TakGame implements Serializable {
     }
 
     //retrieves if the game is finished and who won
-    public Player isFinished() {
+    public Colors isFinished() {
 
         //checks for a road
 
         boolean whiteWin = false;
         boolean blackWin = false;
 
-        Stack<GamePiece>[] row = board[0];
+        GameSquare[] row = board[0];
 
-        for (Stack<GamePiece> square : row) {
+        for (GameSquare square : row) {
             if (square.isEmpty()) continue;
 
             GamePiece piece = square.peek();
@@ -372,7 +396,7 @@ public class TakGame implements Serializable {
         }
 
         for (int r = 0; r < size; r++) {
-            Stack<GamePiece> square = board[r][0];
+            GameSquare square = board[r][0];
 
             if (square.isEmpty()) continue;
 
@@ -388,18 +412,18 @@ public class TakGame implements Serializable {
         }
 
         if (whiteWin && blackWin) {
-            return getCurrentPlayer();
+            return getCurrentPlayer().getColor();
         } else if (whiteWin) {
-            return players.get(0);
+            return Colors.WHITE;
         } else if (blackWin) {
-            return players.get(1);
+            return Colors.BLACK;
         }
 
         boolean boardFilled = true;
 
         for (int r = 0; r < size; r++) {
             for (int c = 0; c < size; c++) {
-                Stack<GamePiece> square = board[r][c];
+                GameSquare square = board[r][c];
 
                 if (square.isEmpty()) {
                     boardFilled = false;
@@ -411,12 +435,20 @@ public class TakGame implements Serializable {
         if (boardFilled) return countPoints();
 
         for (Player player: players) {
-            int pieces = player.getPlayerPieces().size();
+            boolean isPieces = false;
 
-            if (pieces == 0) return countPoints();
+            ArrayList<GameSquare> pieces = player.getPlayerPieces();
+            for (GameSquare pieceStack: pieces) {
+                if (!pieceStack.isEmpty()) {
+                    isPieces = true;
+                    break;
+                }
+            }
+
+            if (!isPieces) return countPoints();
         }
 
-        return null;
+        return Colors.NONE;
     }
 
     private int getNumNormalPieces(int size) {
@@ -477,11 +509,11 @@ public class TakGame implements Serializable {
         return getCurrentPlayer().getColor();
     }
 
-    public Stack<GamePiece> getSquare(int row, int col) {
+    public GameSquare getSquare(int row, int col) {
         return board[row][col];
     }
 
-    public Stack<GamePiece>[][] getBoard() {
+    public GameSquare[][] getBoard() {
         return board;
     }
 
@@ -493,6 +525,7 @@ public class TakGame implements Serializable {
         return moves;
     }
 
+    //checks for a road
     private boolean isRoad(GamePiece currPiece, ArrayList<GamePiece> traveledPieces, Direction endSide) {
 
         int row = currPiece.getRow();
@@ -526,7 +559,7 @@ public class TakGame implements Serializable {
 
         //get north square
         if (row + 1 < size) {
-            Stack<GamePiece> square = board[row + 1][column];
+            GameSquare square = board[row + 1][column];
 
             if (!square.isEmpty()) {
                 GamePiece topPiece = square.peek();
@@ -539,7 +572,7 @@ public class TakGame implements Serializable {
         }
         //get south square
         if (row - 1 >= 0) {
-            Stack<GamePiece> square = board[row - 1][column];
+            GameSquare square = board[row - 1][column];
 
             if (!square.isEmpty()) {
 
@@ -551,7 +584,7 @@ public class TakGame implements Serializable {
         }
         //get east square
         if (column + 1 < size) {
-            Stack<GamePiece> square = board[row][column + 1];
+            GameSquare square = board[row][column + 1];
             if (!square.isEmpty()) {
                 GamePiece topPiece = square.peek();
 
@@ -561,7 +594,7 @@ public class TakGame implements Serializable {
         }
         //get west square
         if (column - 1 >= 0) {
-            Stack<GamePiece> square = board[row][column - 1];
+            GameSquare square = board[row][column - 1];
 
             if (!square.isEmpty()) {
                 GamePiece topPiece = square.peek();
@@ -575,46 +608,47 @@ public class TakGame implements Serializable {
         return isConnected;
     }
 
-    private Player countPoints() {
+    //counts the number of flat pieces each player has on the board and returns highest value
+    private Colors countPoints() {
 
         int intWhiteFlatPieces = 0;
         int intBlackFlatPieces = 0;
 
         for (int r = 0; r < size; r++) {
             for (int c = 0; c < size; c++) {
-                Stack<GamePiece> square = board[r][c];
+                GameSquare square = board[r][c];
 
                 if (square.isEmpty()) continue;
 
                 GamePiece piece = square.peek();
                 if (piece.getColor() == Colors.WHITE && piece.getType() == PieceType.FLAT) {
                     intWhiteFlatPieces++;
-                } else {
+                } else if (piece.getType() == PieceType.FLAT){
                     intBlackFlatPieces++;
                 }
             }
         }
 
         if (intWhiteFlatPieces > intBlackFlatPieces) {
-            return players.get(0);
+            return Colors.WHITE;
         } else if (intWhiteFlatPieces < intBlackFlatPieces) {
-            return players.get(1);
+            return Colors.BLACK;
         } else {
-            return null;
+            return Colors.TIE;
         }
     }
 
     private GamePiece findGamePiece(int id) {
         for (Player player: players) {
-            for (Stack<GamePiece> pieceStack : player.playerPieces) {
+            for (GameSquare pieceStack : player.playerPieces) {
                 for (GamePiece piece : pieceStack) {
                     if (piece.getId() == id) return piece;
                 }
             }
         }
 
-        for (Stack<GamePiece>[] row : board) {
-            for (Stack<GamePiece> column : row) {
+        for (GameSquare[] row : board) {
+            for (GameSquare column : row) {
                 for (GamePiece piece : column) {
                     if (piece.getId() == id) return piece;
                 }
@@ -624,14 +658,36 @@ public class TakGame implements Serializable {
         return null;
     }
 
+    //used for creating new pieces
     public int getCurrId() {
         int result = currId;
         currId++;
         return result;
     }
 
+    //changes the piecetype
     public void setGamePieceType(int id, PieceType type) {
         GamePiece gamePiece = findGamePiece(id);
         gamePiece.setType(type);
+    }
+
+    //gets all possible moves for a selected piece
+    public ArrayList<GameSquare> getPossibleMoves() {
+        ArrayList<GameSquare> possibleMoves = new ArrayList<>();
+
+        if (playerSelection.isEmpty()) return possibleMoves;
+
+        GamePiece bottomPiece = playerSelection.get(0);
+
+        int row = bottomPiece.getRow();
+        int column = bottomPiece.getColumn();
+
+        if (isValidMove(row - 1, column)) possibleMoves.add(board[row - 1][column]);
+        if (isValidMove(row + 1, column)) possibleMoves.add(board[row + 1][column]);
+        if (isValidMove(row, column - 1)) possibleMoves.add(board[row][column - 1]);
+        if (isValidMove(row, column + 1)) possibleMoves.add(board[row][column + 1]);
+        if (direction != null) possibleMoves.add(board[row][column]);
+
+        return possibleMoves;
     }
 }

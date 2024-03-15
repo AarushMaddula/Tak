@@ -9,17 +9,17 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 
 public class Client {
-    private static Socket clientSocket;
-    private static ObjectOutputStream out;
-    private static ObjectInputStream in;
+    private Socket clientSocket;
+    private ObjectOutputStream out;
+    private ObjectInputStream in;
 
-    private static GameInstance gameInstance = null;
+    private GameInstance gameInstance = null;
 
-    private static int currId = 0;
+    private int currId = 0;
 
-    private static final ArrayList<Message> msgs = new ArrayList<>();
+    private final ArrayList<Message> msgs = new ArrayList<>();
 
-    public static void startConnection(String ip, int port) throws IOException, ClassNotFoundException {
+    public void startConnection(String ip, int port) throws IOException, ClassNotFoundException {
         clientSocket = new Socket(ip, port);
         out = new ObjectOutputStream(clientSocket.getOutputStream());
         in = new ObjectInputStream(clientSocket.getInputStream());
@@ -27,11 +27,11 @@ public class Client {
         new MyThread();
     }
 
-    public static void setGameInstance(GameInstance gameInstance) {
-        Client.gameInstance = gameInstance;
+    public void setGameInstance(GameInstance gameInstance) {
+        this.gameInstance = gameInstance;
     }
 
-    static class MyThread implements Runnable {
+    class MyThread implements Runnable {
 
         Thread t;
 
@@ -62,14 +62,14 @@ public class Client {
 
                         System.out.println("Received MessageID: " + msg.msgID + " | " + msgs);
                     }
-                } catch (IOException | ClassNotFoundException e) {
-                    System.out.println(e);
+                } catch (IOException | ClassNotFoundException ignored) {
+
                 }
             }
         }
     }
 
-    public static Colors getColor() throws IOException, ClassNotFoundException {
+    public Colors getColor() throws IOException, ClassNotFoundException {
         boolean isReached = false;
         Message msgRecieved = null;
 
@@ -88,7 +88,7 @@ public class Client {
         return msgRecieved.color;
     }
 
-    public static Message sendRequest(ArrayList<Object> method) throws IOException, ClassNotFoundException {
+    public Message sendRequest(ArrayList<Object> method) throws IOException, ClassNotFoundException {
 
         int msgSentId = currId;
         method.add(currId);
@@ -117,7 +117,7 @@ public class Client {
 
     }
 
-    public static void stopConnection() throws IOException {
+    public void stopConnection() throws IOException {
         in.close();
         out.close();
         clientSocket.close();

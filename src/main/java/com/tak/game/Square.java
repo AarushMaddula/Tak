@@ -3,7 +3,7 @@ package com.tak.game;
 import javafx.scene.shape.Box;
 
 public class Square extends Box {
-    int row, column;
+    private int row, column;
 
     void setRow (int row) {
         this.row = row;

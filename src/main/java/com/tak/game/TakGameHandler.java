@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Stack;
 
+//directs requests to and from the backend to the client depending on if the mode is multiplayer
 public class TakGameHandler {
 
     TakGame game;
@@ -121,7 +122,7 @@ public class TakGameHandler {
         } else game.setSelection(id);
     }
 
-    public Stack<GamePiece> getPlayerSelection() {
+    public GameSquare getPlayerSelection() {
         if (client != null) {
             ArrayList<Object> method = new ArrayList<>();
             method.add("getPlayerSelection");
@@ -193,13 +194,13 @@ public class TakGameHandler {
         } else game.toNextTurn();
     }
 
-    public Player isFinished() {
+    public Colors isFinished() {
         if (client != null) {
             ArrayList<Object> method = new ArrayList<>();
             method.add("isFinished");
 
             try {
-                return client.sendRequest(method).player;
+                return client.sendRequest(method).color;
             } catch (IOException | ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
@@ -232,7 +233,7 @@ public class TakGameHandler {
         } else return game.getCurrentColor();
     }
 
-    public Stack<GamePiece> getSquare(int row, int col) {
+    public GameSquare getSquare(int row, int col) {
         if (client != null) {
             ArrayList<Object> method = new ArrayList<>();
             method.add("getSquare");
@@ -247,7 +248,7 @@ public class TakGameHandler {
         } else return game.getSquare(row, col);
     }
 
-    public Stack<GamePiece>[][] getBoard() {
+    public GameSquare[][] getBoard() {
         if (client != null) {
             ArrayList<Object> method = new ArrayList<>();
             method.add("getBoard");
@@ -301,6 +302,19 @@ public class TakGameHandler {
             }
 
         } else game.setGamePieceType(id, type);
+    }
+
+    public ArrayList<GameSquare> getPossibleMoves() {
+        if (client != null) {
+            ArrayList<Object> method = new ArrayList<>();
+            method.add("getPossibleMoves");
+
+            try {
+                return client.sendRequest(method).pieces;
+            } catch (IOException | ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        } else return game.getPossibleMoves();
     }
 
 }
